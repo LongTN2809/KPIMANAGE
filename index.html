@@ -5322,6 +5322,8 @@
         if (tbody) {
           tbody.innerHTML = "";
           state.members.forEach((m) => {
+            if(m.role === "Super Admin) console.log("Co super admin
+            else console.log("Khong cos super admin)
             if(m.role !== "Super Admin"){
               tbody.innerHTML += `
               <tr class="border-b hover:bg-slate-50">
