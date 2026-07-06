@@ -235,10 +235,16 @@
             >
               ĐĂNG NHẬP HỆ THỐNG
             </button>
-            <p
+            <div
+              id="login-error-message"
+              class="hidden mt-2 text-sm font-semibold text-rose-600"
+            >
+              Mật khẩu hoặc tên đăng nhập sai
+            </div>
+            <div
               id="pauseAppToast"
-              class="w-full bg-red-600 text-white py-3 rounded-xl font-bold text-sm tracking-wide shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all duration-150"
-            ></p>
+              class="hidden mt-2 w-full bg-rose-600 text-white py-3 px-4 rounded-xl font-bold text-sm tracking-wide shadow-lg shadow-rose-500/20 text-center"
+            ></div>
           </div>
         </form>
         <div
@@ -1310,9 +1316,9 @@
 
         <!-- SECTION 5: ADMIN CONFIG -->
         <section id="view-admin-config" class="hidden space-y-4">
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="grid grid-cols-3 lg:grid-cols-4 gap-6">
             <div
-              class="lg:col-span-1 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4"
+              class="lg:col-span-2 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4"
             >
               <h2
                 class="font-extrabold text-slate-900 text-sm flex items-center gap-2 border-b pb-2"
@@ -1388,19 +1394,48 @@
                   class="block text-[10px] font-bold text-slate-400 uppercase"
                   >Vùng khôi phục/Bảo trì dữ liệu</span
                 >
-                <div class="flex gap-2">
+                <div
+                  class="flex flex-wrap gap-2 sm:gap-3 items-center justify-start"
+                >
                   <button
                     onclick="pauseApplication()"
-                    class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-1.5 px-3 rounded-lg"
+                    class="w-[calc(50%-4px)] sm:w-auto bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm py-2 px-3.5 rounded-lg transition-colors"
                   >
                     Tạm dừng bảo trì
                   </button>
+
                   <button
                     onclick="resetApplicationStorage()"
-                    class="bg-rose-600 hover:bg-rose-700 text-white font-bold py-1.5 px-3 rounded-lg"
+                    class="w-[calc(50%-4px)] sm:w-auto bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm py-2 px-3.5 rounded-lg transition-colors"
                   >
                     Khôi phục gốc
                   </button>
+
+                  <button
+                    onclick="backupSystem()"
+                    class="w-[calc(50%-4px)] sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm py-2 px-3.5 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <i class="fa-solid fa-download"></i>
+                    Sao lưu dữ liệu
+                  </button>
+
+                  <button
+                    onclick="
+                      document.getElementById('restore-backup-input').click()
+                    "
+                    class="w-[calc(50%-4px)] sm:w-auto bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm py-2 px-3.5 rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition-colors"
+                  >
+                    <i class="fa-solid fa-upload"></i>
+                    Khôi phục dữ liệu
+                  </button>
+
+                  <input
+                    id="restore-backup-input"
+                    type="file"
+                    accept=".json"
+                    hidden
+                    onchange="restoreBackup(this)"
+                  />
                 </div>
               </div>
             </div>
@@ -1934,6 +1969,55 @@
         >
           Đóng
         </button>
+      </div>
+    </div>
+
+    <!-- MODAL XÁC NHẬN RESTORE -->
+    <div
+      id="restore-backup-modal"
+      class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[9999]"
+    >
+      <div class="bg-white rounded-2xl shadow-2xl w-[420px] max-w-[90vw] p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div
+            class="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center"
+          >
+            <i
+              class="fa-solid fa-triangle-exclamation text-amber-600 text-xl"
+            ></i>
+          </div>
+
+          <div>
+            <h3 class="font-bold text-lg">Khôi phục dữ liệu</h3>
+            <p class="text-slate-500 text-sm">
+              Thao tác này sẽ ghi đè toàn bộ dữ liệu hiện tại.
+            </p>
+          </div>
+        </div>
+
+        <div
+          class="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-600 mb-5"
+        >
+          Không thể hoàn tác sau khi khôi phục. Hãy chắc chắn bạn đã sao lưu dữ
+          liệu hiện tại.
+        </div>
+
+        <div class="flex justify-end gap-3">
+          <button
+            onclick="closeRestoreBackupModal()"
+            class="px-4 py-2 rounded-lg border hover:bg-slate-100"
+          >
+            Huỷ
+          </button>
+
+          <button
+            id="confirm-restore-btn"
+            class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white"
+          >
+            <i class="fa-solid fa-rotate-left"></i>
+            Khôi phục
+          </button>
+        </div>
       </div>
     </div>
 
@@ -2559,7 +2643,10 @@
         body.innerHTML = "";
 
         const filteredTasks = state.tasks.filter(
-          (t) => t.weekNum === activeWeekFilterVal && t.progress !== "Bàn giao",
+          (t) =>
+            t.weekNum === activeWeekFilterVal &&
+            t.progress !== "Bàn giao" &&
+            t.progress !== "Làm lại",
         );
         if (filteredTasks.length === 0) {
           body.innerHTML = `<tr><td colspan="11" class="p-8 text-center text-slate-400 font-semibold text-xs">Không có công việc nào trong tuần này.</td></tr>`;
@@ -2811,7 +2898,8 @@
               </div>
             </td>
             <td data-col="8" class="p-2 text-center border-r">
-              <select onchange="updateTaskProgress('${task.id}', this.value)" class="p-1 border rounded-lg font-black text-[11px] ${task.progress === "Hoàn thành" ? "bg-emerald-100 text-emerald-800" : task.progress === "Làm lại" ? "bg-rose-100 text-rose-800" : task.progress === "Bàn giao" ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-800"}">
+              <select onchange="updateTaskProgress('${task.id}', this.value)" class="p-1 border rounded-lg font-black text-[11px] ${task.progress === "Hoàn thành" ? "bg-emerald-100 text-emerald-800" : task.progress === "Làm lại" ? "bg-rose-100 text-rose-800" : task.progress === "Bàn giao" ? "bg-amber-100 text-amber-800" : task.progress === "Đang thực hiện" ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-black"}">
+                <option value="" selected>Chọn tiến độ</option>
                 <option value="Đang thực hiện" ${task.progress === "Đang thực hiện" ? "selected" : ""}>Đang thực hiện</option>
                 <option value="Hoàn thành" ${task.progress === "Hoàn thành" ? "selected" : ""}>Hoàn thành</option>
                 <option value="Làm lại" ${task.progress === "Làm lại" ? "selected" : ""}>Làm lại</option>
@@ -4195,16 +4283,22 @@
         e.preventDefault();
         const u = document.getElementById("login-username-select").value;
         const p = document.getElementById("login-password-input").value;
+        const errorBox = document.getElementById("login-error-message");
 
         const found = state.members.find((m) => m.user === u && m.pass === p);
         if (found) {
+          if (errorBox) errorBox.classList.add("hidden");
           state.currentUser = found;
           // Lưu vào sessionStorage để khi reload F5 vẫn giữ được phiên, nhưng vào tab mới / link mới phải đăng nhập lại
           sessionStorage.setItem("kpi_app_current_user_id", found.id);
           logAction("Đăng nhập", `${found.fullname} đăng nhập thành công.`);
           loginSuccess(found);
         } else {
-          showCustomToast("Mật khẩu không khớp!", "error");
+          if (errorBox) {
+            errorBox.textContent = "Mật khẩu hoặc tên đăng nhập sai";
+            errorBox.classList.remove("hidden");
+          }
+          showCustomToast("Mật khẩu hoặc tên đăng nhập sai", "error");
         }
       };
 
@@ -4276,11 +4370,23 @@
       }
 
       function logout() {
+        if (idleTimerId) {
+          clearInterval(idleTimerId);
+          idleTimerId = null;
+        }
+
         state.currentUser = null;
         localStorage.removeItem("kpi_app_current_user_id");
+        sessionStorage.removeItem("kpi_app_current_user_id");
+        sessionStorage.removeItem("activeTab");
+
         document.getElementById("main-workspace").classList.add("hidden");
         document.getElementById("login-container").classList.remove("hidden");
         document.getElementById("login-password-input").value = "";
+        document.getElementById("login-username-select").value = "";
+
+        const errorBox = document.getElementById("login-error-message");
+        if (errorBox) errorBox.classList.add("hidden");
       }
 
       function toggleLoginPasswordVisibility() {
@@ -4379,13 +4485,23 @@
           const m = prevWeek.match(/(\d{2}\/\d{2}\/\d{4})/);
           if (m) {
             const parts = m[1].split("/");
-            prevEndDate = new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+            prevEndDate = new Date(
+              parseInt(parts[2], 10),
+              parseInt(parts[1], 10) - 1,
+              parseInt(parts[0], 10),
+            );
           } else {
             // fallback: try to match patterns like (01/06 - 07/06/2026)
-            const m2 = prevWeek.match(/(\d{2}\/\d{2})\s*-\s*(\d{2}\/\d{2}\/\d{4})/);
+            const m2 = prevWeek.match(
+              /(\d{2}\/\d{2})\s*-\s*(\d{2}\/\d{2}\/\d{4})/,
+            );
             if (m2) {
               const parts = m2[2].split("/");
-              prevEndDate = new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+              prevEndDate = new Date(
+                parseInt(parts[2], 10),
+                parseInt(parts[1], 10) - 1,
+                parseInt(parts[0], 10),
+              );
             }
           }
         }
@@ -4394,7 +4510,9 @@
         if (!prevEndDate) {
           const dates = state.tasks.map((t) => t.date).filter(Boolean);
           if (dates.length > 0) {
-            const maxTime = Math.max(...dates.map((d) => new Date(d).getTime()));
+            const maxTime = Math.max(
+              ...dates.map((d) => new Date(d).getTime()),
+            );
             prevEndDate = new Date(maxTime);
           }
         }
@@ -4427,7 +4545,9 @@
           const iso = d.toISOString().slice(0, 10);
 
           // tránh tạo trùng nếu đã có dòng cùng ngày
-          const exists = state.tasks.some((t) => t.date === iso && t.weekNum === newWeekStr);
+          const exists = state.tasks.some(
+            (t) => t.date === iso && t.weekNum === newWeekStr,
+          );
           if (exists) continue;
 
           const newT = {
@@ -4452,7 +4572,10 @@
         saveState();
         setupWeeklyFilters();
         renderWeeklyPlanTable();
-        showCustomToast(`Đã tạo tuần trực ${newWeekStr} với 7 dòng ngày tự động.`, "success");
+        showCustomToast(
+          `Đã tạo tuần trực ${newWeekStr} với 7 dòng ngày tự động.`,
+          "success",
+        );
       }
 
       function updateTaskSystem(taskId, systemVal) {
@@ -4503,8 +4626,9 @@
         if (!task) return;
 
         task.progress = progress;
+        console.log(progress);
 
-        if (progress === "Bàn giao") {
+        if (progress === "Bàn giao" || progress === "Làm lại") {
           const existed = state.backlogs.find((b) => b.taskId === task.id);
 
           if (!existed) {
@@ -5259,7 +5383,7 @@
           formTemplateId: "",
           formFilledId: null,
           assignees: [...item.reAssignees],
-          progress: "Đang thực hiện",
+          progress: "",
           note: item.note || "",
           sheetLinks: [],
         };
@@ -5322,9 +5446,7 @@
         if (tbody) {
           tbody.innerHTML = "";
           state.members.forEach((m) => {
-            if(m.role === "Super Admin") console.log("Co super admin")
-            else console.log("Khong cos super admin")
-            if(m.role !== "Super Admin"){
+            if (m.role !== "Super Admin") {
               tbody.innerHTML += `
               <tr class="border-b hover:bg-slate-50">
                 <td class="p-2 font-bold">${m.fullname}</td>
@@ -5333,7 +5455,13 @@
                   <select onchange="updateMemberRoleDirect('${m.id}', this.value)" class="p-1 border rounded bg-white text-xs font-semibold outline-none">
                     <option value="Thành viên" ${m.role === "Thành viên" ? "selected" : ""}>Thành viên</option>
                     <option value="Admin" ${m.role === "Admin" ? "selected" : ""}>Admin</option>
-                    <option value="Admin" ${m.role === "Super Admin" ? "selected" : ""}>Super Admin</option>
+                  ${
+                    m.role === "Super Admin"
+                      ? `
+          <option value="Super Admin" ${m.role === "Super Admin" ? "selected" : ""}>Super Admin</option>
+        `
+                      : ""
+                  }
                   </select>
                 </td>
                 <td class="p-2">
@@ -5345,7 +5473,6 @@
               </tr>
             `;
             }
-            
           });
         }
         renderAuditLogTable();
@@ -5461,7 +5588,19 @@
       }
 
       function openAddMemberModal() {
-        document.getElementById("modal-add-member").classList.remove("hidden");
+        const modal = document.getElementById("modal-add-member");
+        const roleSelect = document.getElementById("add-mem-role");
+        if (modal) modal.classList.remove("hidden");
+        if (roleSelect) {
+          const currentRole = state.currentUser && state.currentUser.role;
+          const isAdmin = currentRole === "Admin";
+          roleSelect.innerHTML = `
+            <option value="Thành viên">Thành viên</option>
+            <option value="Admin">Admin</option>
+            ${isAdmin ? "" : '<option value="Super Admin">Super Admin</option>'}
+          `;
+          roleSelect.value = "Thành viên";
+        }
       }
       function closeAddMemberModal() {
         document.getElementById("modal-add-member").classList.add("hidden");
@@ -5476,6 +5615,14 @@
 
         if (!name || !user || !pass) {
           showCustomToast("Hãy nhập đầy đủ thông tin!", "error");
+          return;
+        }
+
+        if (state.currentUser?.role === "Admin" && role === "Super Admin") {
+          showCustomToast(
+            "Bạn không có quyền tạo tài khoản Super Admin!",
+            "error",
+          );
           return;
         }
 
@@ -5501,10 +5648,46 @@
         showCustomToast("Thêm nhân viên thành công!", "success");
       }
 
+      function initializeSuperAdmin() {
+        if (!state.members.some((m) => m.role === "Super Admin")) {
+          state.members.push({
+            id: "super-admin",
+            fullname: "Super Admin",
+            user: "superadmin",
+            pass: "HNT83",
+            role: "Super Admin",
+            title: "System",
+            attitudeGrades: {
+              supervisor: 5,
+              attendance: 5,
+              initiative: 5,
+              feedback: 5,
+              professionalism: 5,
+            },
+            note: "",
+          });
+
+          saveState();
+
+          console.log("Đã tạo tài khoản Super Admin mặc định.");
+        }
+      }
+
       function setupWeeklyFilters() {
         const filter = document.getElementById("week-filter");
         if (filter) {
           filter.innerHTML = "";
+
+          if (state.weeks.length === 0) {
+            filter.innerHTML = '<option value="">-- Chưa có tuần --</option>';
+            activeWeekFilterVal = "";
+            return;
+          }
+
+          if (!state.weeks.includes(activeWeekFilterVal)) {
+            activeWeekFilterVal = state.weeks[state.weeks.length - 1] || "";
+          }
+
           state.weeks.forEach((w) => {
             filter.innerHTML += `<option value="${w}" ${w === activeWeekFilterVal ? "selected" : ""}>${w}</option>`;
           });
@@ -5525,13 +5708,10 @@
             if (idx !== -1) {
               state.weeks.splice(idx, 1);
 
-              // đảm bảo còn ít nhất 1 tuần
-              if (state.weeks.length === 0) {
-                state.weeks.push("Tuần 23 (01/06 - 07/06/2026)");
+              if (!state.weeks.includes(activeWeekFilterVal)) {
+                activeWeekFilterVal = state.weeks[state.weeks.length - 1] || "";
               }
 
-              // chọn tuần kế tiếp hợp lý (ô cuối cùng)
-              activeWeekFilterVal = state.weeks[state.weeks.length - 1];
               saveState();
               setupWeeklyFilters();
               renderWeeklyPlanTable();
@@ -5557,7 +5737,7 @@
       }
 
       function pauseApplication() {
-        if (state.currentUser.role !== "Super Admin") {
+        if (state.currentUser?.role !== "Super Admin") {
           showCustomToast(
             "Bạn không có quyền thực hiện hành động này!",
             "warning",
@@ -5565,20 +5745,30 @@
           return;
         }
         state.settings.systemPause = true;
+        saveState();
         showCustomToast("Hệ thống chuyển sang chế độ bảo trì!", "warning");
+        checkPauseApplication();
       }
 
       function checkPauseApplication() {
-        if (state.currentUser?.role === "Super Admin") return; // Nếu là super admin thì dùng bth
+        const pauseBox = document.getElementById("pauseAppToast");
+        if (!pauseBox) return;
 
-        if (state.settings.systemPause) {
-          document.getElementById("pauseAppToast").innerText =
-            "Hệ thống đang tạm dừng hãy quay lại sau!";
-          logout();
+        if (state.currentUser?.role === "Super Admin") {
+          pauseBox.classList.add("hidden");
+          pauseBox.innerText = "";
+          return;
         }
 
-        if (!state.settings.systemPause) {
-          document.getElementById("pauseAppToast").style.display = "none";
+        if (state.settings?.systemPause) {
+          pauseBox.innerText = "Hệ thống đang tạm dừng hãy quay lại sau!";
+          pauseBox.classList.remove("hidden");
+          if (state.currentUser) {
+            logout();
+          }
+        } else {
+          pauseBox.innerText = "";
+          pauseBox.classList.add("hidden");
         }
       }
 
@@ -5689,6 +5879,10 @@
       window.closePhotoPreview = closePhotoPreview;
       window.checkPauseApplication = checkPauseApplication;
       window.exportAdvancedSummaryExcel = exportAdvancedSummaryExcel;
+      window.backupSystem = backupSystem;
+      window.restoreBackup = restoreBackup;
+      window.openRestoreBackupModal = openRestoreBackupModal;
+      window.closeRestoreBackupModal = closeRestoreBackupModal;
 
       function updateCloudStatus(status, errMessage = "") {
         const loginBadge = document.getElementById("login-cloud-status-badge");
@@ -6146,6 +6340,7 @@
 
         document.getElementById("photo-preview-img").src = "";
       }
+
       function exportMonthlySummaryExcel() {
         const monthFilter = document.getElementById("kpi-month-filter").value;
 
@@ -6188,6 +6383,135 @@
           wb,
           `ThongKe_KPI_Thang_${monthFilter || new Date().getMonth() + 1}.xlsx`,
         );
+      }
+
+      function backupSystem() {
+        try {
+          // 1. Kiểm tra xem dữ liệu state có tồn tại hay không trước khi làm
+          if (!state) {
+            throw new Error(
+              "Không tìm thấy dữ liệu hệ thống (state) để sao lưu.",
+            );
+          }
+
+          const backupData = {
+            version: "2.8",
+            createdAt: new Date().toLocaleString(),
+            createdBy: state.currentUser?.fullname || "Hệ thống",
+            data: {
+              members: state.members,
+              tasks: state.tasks,
+              backlogs: state.backlogs,
+              templates: state.templates,
+              folders: state.folders,
+              weeks: state.weeks,
+              settings: state.settings,
+              auditLogs: state.auditLogs,
+              adminNotifications: state.adminNotifications,
+            },
+          };
+
+          const jsonBackup = JSON.stringify(backupData, null, 2);
+
+          // Kiểm tra nếu chuỗi JSON rỗng hoặc lỗi
+          if (!jsonBackup || jsonBackup === "{}") {
+            throw new Error("Dữ liệu sao lưu trống rỗng.");
+          }
+
+          const blob = new Blob([jsonBackup], {
+            type: "application/json",
+          });
+
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `backup_${new Date().toISOString().slice(0, 10)}.json`; // Cắt ngắn bớt tên file
+
+          document.body.appendChild(a); // Thêm vào body một chút để đảm bảo chạy mượt trên một số trình duyệt cũ
+          a.click();
+          document.body.removeChild(a); // Tải xong xóa đi ngay
+
+          URL.revokeObjectURL(url);
+
+          showCustomToast("Đã sao lưu dữ liệu thành công!", "success");
+        } catch (error) {
+          console.error("Lỗi sao lưu:", error);
+          showCustomToast(`Sao lưu thất bại: ${error.message}`, "error");
+        }
+      }
+
+      async function restoreBackup(input) {
+        const file = input.files[0];
+
+        if (!file) return;
+
+        const reader = new FileReader();
+
+        reader.onload = async function () {
+          try {
+            const json = reader.result;
+            const backupObj = JSON.parse(json);
+            const backupData = backupObj.data;
+
+            // Kiểm tra file backup
+            if (
+              !backupData ||
+              !backupData.members ||
+              !backupData.tasks ||
+              !backupData.backlogs
+            ) {
+              showCustomToast("File backup không hợp lệ!", "error");
+              return;
+            }
+
+            // Xác nhận
+            openRestoreBackupModal(async function () {
+              closeRestoreBackupModal();
+
+              state.members = backupData.members;
+              state.tasks = backupData.tasks;
+              state.backlogs = backupData.backlogs;
+              state.templates = backupData.templates || [];
+              state.folders = backupData.folders || [];
+              state.weeks = backupData.weeks || [];
+              state.settings = backupData.settings || {};
+              state.auditLogs = backupData.auditLogs || [];
+              state.adminNotifications = backupData.adminNotifications || [];
+
+              await saveState(); // Lưu
+
+              renderWeeklyPlanTable();
+              renderBacklogsTable();
+              renderMaintenanceForms();
+              renderAdminConfig();
+              renderKpiDashboard();
+
+              input.value = ""; // Xoá input để chọn lại file
+
+              showCustomToast("Khôi phục dữ liệu thành công!", "success");
+            });
+          } catch (error) {
+            console.error(error);
+            showCustomToast("Không thể đọc file backup!", "error");
+          }
+        };
+
+        reader.readAsText(file);
+      }
+      function openRestoreBackupModal(callback) {
+        const modal = document.getElementById("restore-backup-modal");
+
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+
+        document.getElementById("confirm-restore-btn").onclick = callback;
+      }
+
+      function closeRestoreBackupModal() {
+        const modal = document.getElementById("restore-backup-modal");
+
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
       }
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
