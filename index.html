@@ -4095,6 +4095,9 @@
         );
       }
 
+      document.addEventListener("DOMContentLoaded", () => {
+        initSignaturePads(); // Gọi hàm gắn sự kiện mousedown ,... cho vùng ký tên
+      });
       function fillTaskForm(taskId) {
         const task = state.tasks.find((t) => t.id === taskId);
         if (!task) return;
