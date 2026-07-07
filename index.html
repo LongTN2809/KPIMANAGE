@@ -1796,8 +1796,7 @@
                 <div class="border rounded bg-white p-1">
                   <canvas
                     id="signature-tech"
-                    width="180"
-                    height="80"
+                   
                     class="border bg-slate-100 rounded cursor-crosshair w-full"
                   ></canvas>
                 </div>
@@ -1819,8 +1818,7 @@
                 <div class="border rounded bg-white p-1">
                   <canvas
                     id="signature-duty"
-                    width="180"
-                    height="80"
+                    
                     class="border bg-slate-100 rounded cursor-crosshair w-full"
                   ></canvas>
                 </div>
@@ -1844,8 +1842,7 @@
                 <div class="border rounded bg-white p-1">
                   <canvas
                     id="signature-thirdparty"
-                    width="180"
-                    height="80"
+                  
                     class="border bg-slate-100 rounded cursor-crosshair w-full"
                   ></canvas>
                 </div>
@@ -4170,7 +4167,17 @@
           });
 
         document.getElementById("modal-fill-form").classList.remove("hidden");
-        initSignaturePads();
+
+requestAnimationFrame(() => {
+  ["tech", "duty", "thirdparty"].forEach(type => {
+    const canvas = sigCanvases[type];
+    const ctx = sigCtxs[type];
+
+    if (canvas && ctx) {
+      resizeSignatureCanvas(canvas, ctx);
+    }
+  });
+});
       }
 
       function previewFormPhotos(input) {
@@ -5883,6 +5890,8 @@
       window.restoreBackup = restoreBackup;
       window.openRestoreBackupModal = openRestoreBackupModal;
       window.closeRestoreBackupModal = closeRestoreBackupModal;
+      window.initSignaturePads = initSignaturePads;
+      window.resizeSignatureCanvas = resizeSignatureCanvas;
 
       function updateCloudStatus(status, errMessage = "") {
         const loginBadge = document.getElementById("login-cloud-status-badge");
@@ -5947,11 +5956,6 @@
           sigCanvases[type] = canvas;
           sigCtxs[type] = ctx;
 
-          ctx.strokeStyle = "#1e293b";
-          ctx.lineWidth = 2.5;
-          ctx.lineJoin = "round";
-          ctx.lineCap = "round";
-
           let drawing = false;
           let lastX = 0,
             lastY = 0;
@@ -6008,6 +6012,22 @@
             { passive: false },
           );
         });
+      }
+
+      function resizeSignatureCanvas(canvas, ctx) {
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(dpr, dpr);
+
+        ctx.strokeStyle = "#1e293b";
+        ctx.lineWidth = 2.5;
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
       }
 
       // Nút xóa ký chữ ký số
