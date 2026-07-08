@@ -6502,6 +6502,7 @@ requestAnimationFrame(() => {
               state.settings = backupData.settings || {};
               state.auditLogs = backupData.auditLogs || [];
               state.adminNotifications = backupData.adminNotifications || [];
+              state.formSubmissions = backupData.formSubmissions || [];
 
               await saveState(); // Lưu
 
