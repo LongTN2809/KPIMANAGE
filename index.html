@@ -2384,7 +2384,7 @@
             );
             loadLocalFallback();
           }
-        } } catch (e) {
+        } catch (e) {
   console.error("Firebase connection error: ", e);
   updateCloudStatus("error", e.message);
   alert("Firebase error: " + e.message); // tạm thời để debug trên mobile
