@@ -2734,6 +2734,7 @@
             shiftCellHTML = `
               <td data-col="1" class="w-[90px] min-w-[90px] bg-white z-20 p-2 text-center font-bold border-r" rowspan="${shiftSpans[idx]}">
                 <select onchange="updateTaskField('${task.id}', 'shift', this.value)" class="w-full text-center text-[11px] font-black uppercase tracking-wider px-2 pr-8 py-1.5 rounded-lg transition-all cursor-pointer focus:outline-none ${groupdBadgeClassShift}">
+                  <option value="" ${!task.shift ? "selected" : ""} disabled>Chọn ca</option>
                   <option value="Ca A" ${task.shift === "Ca A" ? "selected" : ""}>Ca A</option>
                   <option value="Ca B" ${task.shift === "Ca B" ? "selected" : ""}>Ca B</option>
                   <option value="Ca C" ${task.shift === "Ca C" ? "selected" : ""}>Ca C</option>
