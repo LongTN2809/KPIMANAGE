@@ -2124,17 +2124,17 @@
       const defaultTasks = [
         {
           id: "task-1",
-          weekNum: "Tuần 23 (01/06 - 07/06/2026)",
+          weekNum: "",
           date: "2026-06-03",
-          shift: "Ca A",
-          group: "Bảo Trì",
+          shift: "",
+          group: "",
           area: "Hầm B2 Block A - Khu Chiller",
           content: "Bảo dưỡng tháp giải nhiệt Chiller",
           photos: [],
           formTemplateId: "tmpl-cooling",
           formFilledId: null,
           assignees: ["Tạ Đức Long"],
-          progress: "Đang thực hiện",
+          progress: "",
           note: "",
           sheetLinks: [],
         },
@@ -2732,6 +2732,7 @@
 
           let shiftCellHTML = "";
           if (shiftSpans[idx] > 0) {
+            console.log(task.shift);
             shiftCellHTML = `
               <td data-col="1" class="w-[90px] min-w-[90px] bg-white z-20 p-2 text-center font-bold border-r" rowspan="${shiftSpans[idx]}">
                 <select onchange="updateTaskField('${task.id}', 'shift', this.value)" class="w-full text-center text-[11px] font-black uppercase tracking-wider px-2 pr-8 py-1.5 rounded-lg transition-all cursor-pointer focus:outline-none ${groupdBadgeClassShift}">
@@ -4482,7 +4483,7 @@
           id: "task-" + Date.now(),
           weekNum: activeWeekFilterVal,
           date: baseDateStr,
-          shift: "Ca A",
+          shift: "",
           group: "Bảo Trì",
           area: "",
           content: "",
@@ -4511,7 +4512,7 @@
           id: "task-" + Date.now(),
           weekNum: activeWeekFilterVal,
           date: todayStr,
-          shift: "Ca A",
+          shift: "",
           group: "Bảo Trì",
           area: "",
           content: "",
@@ -4519,7 +4520,7 @@
           formTemplateId: "",
           formFilledId: null,
           assignees: [],
-          progress: "Đang thực hiện",
+          progress: "",
           note: "",
           sheetLinks: [],
         };
@@ -4542,167 +4543,165 @@
       }
 
       function createNewNextWeek() {
-  if (!state.weeks) state.weeks = [];
-  if (!state.tasks) state.tasks = [];
+        if (!state.weeks) state.weeks = [];
+        if (!state.tasks) state.tasks = [];
 
-  // ===== Helpers =====
-  function toISODate(date) {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-  }
+        // ===== Helpers =====
+        function toISODate(date) {
+          const y = date.getFullYear();
+          const m = String(date.getMonth() + 1).padStart(2, "0");
+          const d = String(date.getDate()).padStart(2, "0");
+          return `${y}-${m}-${d}`;
+        }
 
-  function formatDate(date, includeYear = false) {
-    const dd = String(date.getDate()).padStart(2, "0");
-    const mm = String(date.getMonth() + 1).padStart(2, "0");
-    const yyyy = date.getFullYear();
+        function formatDate(date, includeYear = false) {
+          const dd = String(date.getDate()).padStart(2, "0");
+          const mm = String(date.getMonth() + 1).padStart(2, "0");
+          const yyyy = date.getFullYear();
 
-    return includeYear
-      ? `${dd}/${mm}/${yyyy}`
-      : `${dd}/${mm}`;
-  }
+          return includeYear ? `${dd}/${mm}/${yyyy}` : `${dd}/${mm}`;
+        }
 
-  // ISO Week Number
-  function getISOWeek(date) {
-    const d = new Date(date);
-    d.setHours(0, 0, 0, 0);
+        // ISO Week Number
+        function getISOWeek(date) {
+          const d = new Date(date);
+          d.setHours(0, 0, 0, 0);
 
-    d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+          d.setDate(d.getDate() + 4 - (d.getDay() || 7));
 
-    const yearStart = new Date(d.getFullYear(), 0, 1);
+          const yearStart = new Date(d.getFullYear(), 0, 1);
 
-    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-  }
+          return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+        }
 
-  // Lấy thứ 2 của tuần hiện tại
-  function getMonday(date) {
-    const d = new Date(date);
-    const day = d.getDay(); // CN=0
+        // Lấy thứ 2 của tuần hiện tại
+        function getMonday(date) {
+          const d = new Date(date);
+          const day = d.getDay(); // CN=0
 
-    const diff = day === 0 ? -6 : 1 - day;
+          const diff = day === 0 ? -6 : 1 - day;
 
-    d.setDate(d.getDate() + diff);
-    d.setHours(0, 0, 0, 0);
+          d.setDate(d.getDate() + diff);
+          d.setHours(0, 0, 0, 0);
 
-    return d;
-  }
+          return d;
+        }
 
-  // Parse:
-  // Tuần 29 (13/07 - 19/07/2026)
-  function parseWeek(str) {
-    const match = str.match(
-      /Tuần\s+(\d+)\s*\((\d{2})\/(\d{2})\s*-\s*(\d{2})\/(\d{2})\/(\d{4})\)/
-    );
+        // Parse:
+        // Tuần 29 (13/07 - 19/07/2026)
+        function parseWeek(str) {
+          const match = str.match(
+            /Tuần\s+(\d+)\s*\((\d{2})\/(\d{2})\s*-\s*(\d{2})\/(\d{2})\/(\d{4})\)/,
+          );
 
-    if (!match) return null;
+          if (!match) return null;
 
-    const weekNumber = Number(match[1]);
+          const weekNumber = Number(match[1]);
 
-    const startDate = new Date(
-      Number(match[6]),
-      Number(match[3]) - 1,
-      Number(match[2])
-    );
+          const startDate = new Date(
+            Number(match[6]),
+            Number(match[3]) - 1,
+            Number(match[2]),
+          );
 
-    const endDate = new Date(
-      Number(match[6]),
-      Number(match[5]) - 1,
-      Number(match[4])
-    );
+          const endDate = new Date(
+            Number(match[6]),
+            Number(match[5]) - 1,
+            Number(match[4]),
+          );
 
-    return {
-      weekNumber,
-      startDate,
-      endDate,
-    };
-  }
+          return {
+            weekNumber,
+            startDate,
+            endDate,
+          };
+        }
 
-  // =======================================
+        // =======================================
 
-  let nextWeekNumber;
-  let startDate;
-  let endDate;
+        let nextWeekNumber;
+        let startDate;
+        let endDate;
 
-  // ========= Không có tuần =========
-  if (state.weeks.length === 0) {
-    const today = new Date();
+        // ========= Không có tuần =========
+        if (state.weeks.length === 0) {
+          const today = new Date();
 
-    const monday = getMonday(today);
+          const monday = getMonday(today);
 
-    nextWeekNumber = getISOWeek(today) + 1;
+          nextWeekNumber = getISOWeek(today) + 1;
 
-    startDate = new Date(monday);
-    startDate.setDate(startDate.getDate() + 7);
+          startDate = new Date(monday);
+          startDate.setDate(startDate.getDate() + 7);
 
-    endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + 6);
-  }
+          endDate = new Date(startDate);
+          endDate.setDate(endDate.getDate() + 6);
+        }
 
-  // ========= Đã có tuần =========
-  else {
-    const lastWeek = parseWeek(state.weeks[state.weeks.length - 1]);
+        // ========= Đã có tuần =========
+        else {
+          const lastWeek = parseWeek(state.weeks[state.weeks.length - 1]);
 
-    if (!lastWeek) {
-      showCustomToast("Không đọc được dữ liệu tuần cuối!", "error");
-      return;
-    }
+          if (!lastWeek) {
+            showCustomToast("Không đọc được dữ liệu tuần cuối!", "error");
+            return;
+          }
 
-    nextWeekNumber = lastWeek.weekNumber + 1;
+          nextWeekNumber = lastWeek.weekNumber + 1;
 
-    startDate = new Date(lastWeek.endDate);
-    startDate.setDate(startDate.getDate() + 1);
+          startDate = new Date(lastWeek.endDate);
+          startDate.setDate(startDate.getDate() + 1);
 
-    endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + 6);
-  }
+          endDate = new Date(startDate);
+          endDate.setDate(endDate.getDate() + 6);
+        }
 
-  const weekLabel =
-    `Tuần ${nextWeekNumber} (` +
-    `${formatDate(startDate)} - ${formatDate(endDate, true)})`;
+        const weekLabel =
+          `Tuần ${nextWeekNumber} (` +
+          `${formatDate(startDate)} - ${formatDate(endDate, true)})`;
 
-  state.weeks.push(weekLabel);
+        state.weeks.push(weekLabel);
 
-  activeWeekFilterVal = weekLabel;
+        activeWeekFilterVal = weekLabel;
 
-  // ====== Tạo 7 dòng mặc định ======
+        // ====== Tạo 7 dòng mặc định ======
 
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(startDate);
-    d.setDate(startDate.getDate() + i);
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(startDate);
+          d.setDate(startDate.getDate() + i);
 
-    const iso = toISODate(d);
+          const iso = toISODate(d);
 
-    const existed = state.tasks.some(
-      (t) => t.weekNum === weekLabel && t.date === iso
-    );
+          const existed = state.tasks.some(
+            (t) => t.weekNum === weekLabel && t.date === iso,
+          );
 
-    if (existed) continue;
+          if (existed) continue;
 
-    state.tasks.push({
-      id: `task-${Date.now()}-${i}`,
-      weekNum: weekLabel,
-      date: iso,
-      shift: "Ca A",
-      group: "Bảo Trì",
-      area: "",
-      content: "",
-      photos: [],
-      formTemplateId: "",
-      formFilledId: null,
-      assignees: [],
-      progress: "",
-      note: "",
-      sheetLinks: [],
-    });
-  }
+          state.tasks.push({
+            id: `task-${Date.now()}-${i}`,
+            weekNum: weekLabel,
+            date: iso,
+            shift: "",
+            group: "Bảo Trì",
+            area: "",
+            content: "",
+            photos: [],
+            formTemplateId: "",
+            formFilledId: null,
+            assignees: [],
+            progress: "",
+            note: "",
+            sheetLinks: [],
+          });
+        }
 
-  saveState();
-  setupWeeklyFilters();
-  renderWeeklyPlanTable();
+        saveState();
+        setupWeeklyFilters();
+        renderWeeklyPlanTable();
 
-  showCustomToast(`Đã tạo ${weekLabel}`, "success");
-}
+        showCustomToast(`Đã tạo ${weekLabel}`, "success");
+      }
 
       function updateTaskSystem(taskId, systemVal) {
         const t = state.tasks.find((x) => x.id === taskId);
@@ -5559,7 +5558,7 @@
           return;
         }
 
-        const selectedShift = item.reAssignees[0] || "Ca A";
+        const selectedShift = item.reAssignees[0] || "";
         const associatedTask = {
           id: "task-" + Date.now(),
           parentTaskId: item.taskId,
@@ -5885,28 +5884,70 @@
       }
 
       function deleteCurrentWeek() {
-        const sel = document.getElementById("week-filter");
-        if (!sel) return;
-        const val = sel.value;
-        if (!val) return;
+        const select = document.getElementById("week-filter");
+
+        if (!select) return;
+
+        const week = select.value;
+
+        if (!week) {
+          showCustomToast("Không có tuần nào để xóa!", "error");
+          return;
+        }
 
         showConfirm(
           "Xóa tuần",
-          `Bạn có chắc muốn xóa "${val}"? Hành động này không thể hoàn tác.`,
+          `Bạn có chắc muốn xóa "${week}"?\n\nToàn bộ công việc, backlog và biểu mẫu của tuần này sẽ bị xóa vĩnh viễn.`,
           () => {
-            const idx = state.weeks.findIndex((w) => w === val);
-            if (idx !== -1) {
-              state.weeks.splice(idx, 1);
+            // Lấy form đã submit
+            const filledFormIds = state.tasks
+              .filter((t) => t.weekNum === week && t.formFilledId)
+              .map((t) => t.formFilledId);
 
-              if (!state.weeks.includes(activeWeekFilterVal)) {
-                activeWeekFilterVal = state.weeks[state.weeks.length - 1] || "";
-              }
+            // Lấy ID các task sẽ bị xóa
+            const deletedTaskIds = state.tasks
+              .filter((t) => t.weekNum === week)
+              .map((t) => t.id);
 
-              saveState();
-              setupWeeklyFilters();
-              renderWeeklyPlanTable();
-              showCustomToast(`Đã xóa tuần ${val}`, "success");
+            // Xóa tuần
+            state.weeks = state.weeks.filter((w) => w !== week);
+
+            // Xóa task
+            state.tasks = state.tasks.filter((t) => t.weekNum !== week);
+
+            // Xóa backlog
+            state.backlogs = state.backlogs.filter(
+              (b) => !deletedTaskIds.includes(b.taskId),
+            );
+
+            // Xóa form
+            if (state.formSubmissions) {
+              state.formSubmissions = state.formSubmissions.filter(
+                (f) => !filledFormIds.includes(f.id),
+              );
             }
+
+            // -----------------------------
+            // Chọn tuần hiện tại
+            // -----------------------------
+            if (state.weeks.length > 0) {
+              activeWeekFilterVal = state.weeks[state.weeks.length - 1];
+            } else {
+              activeWeekFilterVal = "";
+            }
+
+            // -----------------------------
+            // Lưu & render
+            // -----------------------------
+            saveState();
+
+            setupWeeklyFilters();
+            renderWeeklyPlanTable();
+            renderBacklogsTable();
+            renderSubmittedFormsList();
+            renderMaintenanceForms();
+
+            showCustomToast(`Đã xóa hoàn toàn ${week}`, "success");
           },
         );
       }
