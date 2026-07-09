@@ -114,7 +114,7 @@
   >
     <div
       id="toast-container"
-      class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"
+      class="fixed top-5 right-5 z-[9999] flex flex-col gap-2 pointer-events-none"
     ></div>
 
     <div
@@ -722,7 +722,7 @@
                     >
                   </div>
                   <div class="space-y-3 text-xs">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="grid grid-cols-1 md:grid-cols-1 gap-3">
                       <div>
                         <label
                           class="block text-[10px] font-bold text-slate-400 mb-0.5 uppercase"
@@ -735,50 +735,6 @@
                           class="w-full p-2 border rounded-xl bg-slate-50 font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
                         />
                       </div>
-                      <div>
-                        <label
-                          class="block text-[10px] font-bold text-slate-400 mb-0.5 uppercase"
-                        >
-                          Tên thiết bị
-                        </label>
-
-                        <input
-                          type="text"
-                          id="new-template-equitment-name"
-                          placeholder="Ví dụ: Chiller 1,..."
-                          class="w-full p-2 border rounded-xl bg-slate-50 font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                        />
-
-                        <div class="flex items-center gap-2 mt-2">
-                          <button
-                            type="button"
-                            onclick="openQrScanner()"
-                            class="flex items-center justify-center w-9 h-9 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
-                            title="Quét QR"
-                          >
-                            <i class="fa-solid fa-qrcode text-base"></i>
-                          </button>
-
-                          <input
-                            type="file"
-                            id="qr-image-input"
-                            accept="image/*"
-                            onchange="scanQrFromImage(this)"
-                            hidden
-                          />
-
-                          <button
-                            type="button"
-                            onclick="
-                              document.getElementById('qr-image-input').click()
-                            "
-                            class="flex items-center gap-1.5 px-4 h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-medium transition-colors"
-                          >
-                            <i class="fa-solid fa-image"></i>
-                            <span>Tải ảnh QR</span>
-                          </button>
-                        </div>
-                      </div>
                     </div>
                     <div>
                       <label
@@ -787,9 +743,23 @@
                       >
                       <select
                         id="new-template-system"
+                        onchange="updateTemplateStorageFolderOptions()"
                         class="w-full p-2 border rounded-xl bg-slate-50 font-bold text-slate-700"
                       >
                         <!-- Chèn động thư mục -->
+                      </select>
+                    </div>
+
+                    <div>
+                      <label
+                        class="block text-[10px] font-bold text-slate-400 mb-0.5 uppercase"
+                        >Thư Mục Con Lưu Trữ</label
+                      >
+                      <select
+                        id="new-template-child-system"
+                        class="w-full p-2 border rounded-xl bg-slate-50 font-bold text-slate-700"
+                      >
+                        <option value="">Không chọn (dùng thư mục cha)</option>
                       </select>
                     </div>
 
@@ -1723,7 +1693,7 @@
 
             <input
               type="text"
-              id="new-template-equitment-name"
+              id="fill-form-new-template-equitment-name"
               placeholder="Ví dụ: Chiller 1,..."
               class="w-full p-2 border rounded-xl bg-slate-50 font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
             />
@@ -1796,7 +1766,6 @@
                 <div class="border rounded bg-white p-1">
                   <canvas
                     id="signature-tech"
-                   
                     class="border bg-slate-100 rounded cursor-crosshair w-full"
                   ></canvas>
                 </div>
@@ -1818,7 +1787,6 @@
                 <div class="border rounded bg-white p-1">
                   <canvas
                     id="signature-duty"
-                    
                     class="border bg-slate-100 rounded cursor-crosshair w-full"
                   ></canvas>
                 </div>
@@ -1842,7 +1810,6 @@
                 <div class="border rounded bg-white p-1">
                   <canvas
                     id="signature-thirdparty"
-                  
                     class="border bg-slate-100 rounded cursor-crosshair w-full"
                   ></canvas>
                 </div>
@@ -2385,11 +2352,11 @@
             loadLocalFallback();
           }
         } catch (e) {
-  console.error("Firebase connection error: ", e);
-  updateCloudStatus("error", e.message);
-  alert("Firebase error: " + e.message); // tạm thời để debug trên mobile
-  loadLocalFallback();
-}
+          console.error("Firebase connection error: ", e);
+          updateCloudStatus("error", e.message);
+          alert("Firebase error: " + e.message); // tạm thời để debug trên mobile
+          loadLocalFallback();
+        }
       }
 
       function setupRealtimeSync() {
@@ -2635,6 +2602,19 @@
         if (tabId === "admin-config") renderAdminConfig();
       }
 
+      function getTemplatesForSystem(systemName) {
+        if (!systemName) return [];
+
+        const folderNames = [systemName];
+        const childFolders = (state.folders || [])
+          .filter((folder) => folder.parent === systemName)
+          .map((folder) => folder.name);
+
+        return (state.templates || []).filter((tmpl) => {
+          return folderNames.concat(childFolders).includes(tmpl.system);
+        });
+      }
+
       function renderWeeklyPlanTable() {
         const body = document.getElementById("weekly-plan-table-body");
         if (!body) return;
@@ -2647,7 +2627,19 @@
             t.progress !== "Làm lại",
         );
         if (filteredTasks.length === 0) {
-          body.innerHTML = `<tr><td colspan="11" class="p-8 text-center text-slate-400 font-semibold text-xs">Không có công việc nào trong tuần này.</td></tr>`;
+          const weekFilter = document.getElementById("week-filter");
+          const hasOnlyPlaceholderWeekOption =
+            !!weekFilter &&
+            weekFilter.options.length === 1 &&
+            weekFilter.options[0].value === "" &&
+            (weekFilter.options[0].textContent || "").includes("Chưa có tuần");
+          const hasAnyWeek =
+            Array.isArray(state.weeks) && state.weeks.length > 0;
+          const emptyMessage =
+            hasOnlyPlaceholderWeekOption || !hasAnyWeek
+              ? "Chưa có tuần trực nào được tạo."
+              : "Không có công việc nào trong tuần này.";
+          body.innerHTML = `<tr><td colspan="11" class="p-8 text-center text-slate-400 font-semibold text-xs">${emptyMessage}</td></tr>`;
           return;
         }
 
@@ -2656,7 +2648,7 @@
           if (typeof a.date === "string") return a.date.localeCompare(b.date);
         });
 
-        const spans = new Array(filteredTasks.length).fill(0);
+        const dateSpans = new Array(filteredTasks.length).fill(0);
         let i = 0;
         while (i < filteredTasks.length) {
           let count = 1;
@@ -2666,8 +2658,22 @@
           ) {
             count++;
           }
-          spans[i] = count;
+          dateSpans[i] = count;
           i += count;
+        }
+
+        const shiftSpans = new Array(filteredTasks.length).fill(0);
+        let j = 0;
+        while (j < filteredTasks.length) {
+          let count = 1;
+          while (
+            j + count < filteredTasks.length &&
+            filteredTasks[j].shift === filteredTasks[j + count].shift
+          ) {
+            count++;
+          }
+          shiftSpans[j] = count;
+          j += count;
         }
 
         filteredTasks.forEach((task, idx) => {
@@ -2684,7 +2690,7 @@
           }
 
           let dayColHTML = "";
-          if (spans[idx] > 0) {
+          if (dateSpans[idx] > 0) {
             const displayD = new Date(task.date);
             const labelDay = displayD.toLocaleDateString("vi-VN", {
               weekday: "long",
@@ -2695,10 +2701,44 @@
             });
 
             dayColHTML = `
-              <td data-col="0" class="w-[110px] min-w-[110px] bg-white z-20 text-center border-r border-slate-200 font-extrabold text-slate-700" rowspan="${spans[idx]}">
+              <td data-col="0" class="w-[110px] min-w-[110px] bg-white z-20 text-center border-r border-slate-200 font-extrabold text-slate-700" rowspan="${dateSpans[idx]}">
                 <div class="text-[11px] uppercase mb-1">${labelDay}</div>
                 <div class="text-[12px] text-slate-900 mb-2">${labelDate}</div>
                 <input type="date" class="w-[100px] text-[10px] text-blue-600 bg-white border rounded px-1.5 py-1" value="${task.date}" onchange="updateTaskDateGroup('${task.date}', this.value)" />
+              </td>
+            `;
+          }
+
+          let groupdBadgeClassShift = "";
+
+          switch (task.shift) {
+            case "Ca A":
+              groupdBadgeClassShift =
+                "bg-blue-100 text-blue-700 border border-blue-300";
+              break;
+            case "Ca B":
+              groupdBadgeClassShift =
+                "bg-amber-100 text-amber-700 border border-amber-300";
+              break;
+            case "Ca C":
+              groupdBadgeClassShift =
+                "bg-purple-100 text-purple-700 border border-purple-300";
+              break;
+            default:
+              groupdBadgeClassShift =
+                "bg-slate-100 text-slate-700 border border-slate-200";
+          }
+
+          let shiftCellHTML = "";
+          if (shiftSpans[idx] > 0) {
+            shiftCellHTML = `
+              <td data-col="1" class="w-[90px] min-w-[90px] bg-white z-20 p-2 text-center font-bold border-r" rowspan="${shiftSpans[idx]}">
+                <select onchange="updateTaskField('${task.id}', 'shift', this.value)" class="w-full text-center text-[11px] font-black uppercase tracking-wider px-2 pr-8 py-1.5 rounded-lg transition-all cursor-pointer focus:outline-none ${groupdBadgeClassShift}">
+                  <option value="Ca A" ${task.shift === "Ca A" ? "selected" : ""}>Ca A</option>
+                  <option value="Ca B" ${task.shift === "Ca B" ? "selected" : ""}>Ca B</option>
+                  <option value="Ca C" ${task.shift === "Ca C" ? "selected" : ""}>Ca C</option>
+                  <option value="Ca N" ${task.shift === "Ca N" ? "selected" : ""}>Ca N</option>
+                </select>
               </td>
             `;
           }
@@ -2752,8 +2792,8 @@
           });
 
           let templateDropdown = `<option value="">-- Biểu mẫu --</option>`;
-          const associatedTemplates = state.templates.filter(
-            (tmpl) => tmpl.system === task.selectedSystem,
+          const associatedTemplates = getTemplatesForSystem(
+            task.selectedSystem,
           );
           associatedTemplates.forEach((tmpl) => {
             templateDropdown += `<option value="${tmpl.id}" ${task.formTemplateId === tmpl.id ? "selected" : ""}>${tmpl.name}</option>`;
@@ -2824,36 +2864,9 @@
                 "bg-slate-100 text-slate-700 border border-slate-200";
           }
 
-          let groupdBadgeClassShift = "";
-
-          switch (task.shift) {
-            case "Ca A":
-              groupdBadgeClassShift =
-                "bg-blue-100 text-blue-700 border border-blue-300";
-              break;
-            case "Ca B":
-              groupdBadgeClassShift =
-                "bg-amber-100 text-amber-700 border border-amber-300";
-              break;
-            case "Ca C":
-              groupdBadgeClassShift =
-                "bg-purple-100 text-purple-700 border border-purple-300";
-              break;
-            default:
-              groupdBadgeClassShift =
-                "bg-slate-100 text-slate-700 border border-slate-200";
-          }
-
           tr.innerHTML = `
             ${dayColHTML}
-            <td data-col="1" class="w-[90px] min-w-[90px] bg-white z-20 p-2 text-center font-bold border-r">
-              <select onchange="updateTaskField('${task.id}', 'shift', this.value)" class="w-full text-center text-[11px] font-black uppercase tracking-wider px-2 pr-8 py-1.5 rounded-lg transition-all cursor-pointer focus:outline-none ${groupdBadgeClassShift}">
-                <option value="Ca A" ${task.shift === "Ca A" ? "selected" : ""}>Ca A</option>
-                <option value="Ca B" ${task.shift === "Ca B" ? "selected" : ""}>Ca B</option>
-                <option value="Ca C" ${task.shift === "Ca C" ? "selected" : ""}>Ca C</option>
-                <option value="Ca N" ${task.shift === "Ca N" ? "selected" : ""}>Ca N</option>
-              </select>
-            </td>
+            ${shiftCellHTML}
             <td data-col="2" class="w-[100px] min-w-[100px] bg-white z-20 p-2 border-r">
            <select 
               onchange="updateTaskField('${task.id}', 'group', this.value)" 
@@ -3652,6 +3665,7 @@
           }
 
           const sub = doc.data();
+          console.log(sub);
 
           // toàn bộ code PDF bên dưới giữ nguyên
           let responsesHTML = "";
@@ -3691,12 +3705,15 @@
 
                   <table style="width: 100%; font-size: 12px; margin-bottom: 20px; border-collapse: collapse;">
                       <tr style="border-bottom: 1px solid #cbd5e1;">
-                          <td style="padding: 8px 0; width: 50%;"><strong style="color: #1e3a8a;">Hệ thống / Thiết bị:</strong> <span style="color: #2563eb;">${sub.templateName || "N/A"}</span></td>
+                          <td style="padding: 8px 0; width: 50%;"><strong style="color: #1e3a8a;">Hệ thống</strong> <span style="color: #2563eb;">${sub.templateName || "N/A"}</span></td>
                           <td style="padding: 8px 0;"><strong style="color: #1e3a8a;">Mã định danh:</strong> <span style="color: #2563eb;">${sub.code || "N/A"}</span></td>
                       </tr>
                       <tr style="border-bottom: 1px solid #cbd5e1;">
                           <td style="padding: 8px 0;"><strong style="color: #1e3a8a;">Ngày thực hiện:</strong> <span style="color: #2563eb;">${sub.dateSubmitted || "N/A"}</span></td>
                           <td style="padding: 8px 0;"><strong style="color: #1e3a8a;">Số phiếu lưu trữ:</strong> <span style="color: #2563eb;">${sub.id || "N/A"}</span></td>
+                      </tr>
+                     <tr>
+                    <td style="padding: 8px 0;"><strong style="color: #1e3a8a;">Tên thiết bị:</strong> <span style="color: #2563eb;">${sub.equitmentName}</span></td>
                       </tr>
                   </table>
 
@@ -3738,6 +3755,7 @@
 
           const safeName = (sub.templateName || "form").replaceAll(" ", "_");
           const safeDate = (sub.dateSubmitted || "").replaceAll("/", "-");
+          const safeEquitmentName = sub.equitmentName || "";
 
           const options = {
             margin: [10, 10, 10, 10],
@@ -3835,7 +3853,9 @@
               heightLeft -= pageHeight;
             }
 
-            pdf.save(`Phieu_Bao_Tri_${safeName}_${safeDate}.pdf`);
+            pdf.save(
+              `Phieu_Bao_Tri_${safeName}_${safeDate}_${safeEquitmentName}.pdf`,
+            );
 
             showCustomToast("Đã tải PDF phiếu kiểm tra thành công!", "success");
           } catch (err) {
@@ -4172,16 +4192,16 @@
 
         document.getElementById("modal-fill-form").classList.remove("hidden");
 
-requestAnimationFrame(() => {
-  ["tech", "duty", "thirdparty"].forEach(type => {
-    const canvas = sigCanvases[type];
-    const ctx = sigCtxs[type];
+        requestAnimationFrame(() => {
+          ["tech", "duty", "thirdparty"].forEach((type) => {
+            const canvas = sigCanvases[type];
+            const ctx = sigCtxs[type];
 
-    if (canvas && ctx) {
-      resizeSignatureCanvas(canvas, ctx);
-    }
-  });
-});
+            if (canvas && ctx) {
+              resizeSignatureCanvas(canvas, ctx);
+            }
+          });
+        });
       }
 
       function previewFormPhotos(input) {
@@ -4207,6 +4227,27 @@ requestAnimationFrame(() => {
         const responses = [];
         let valid = true;
 
+        const equipmentName = document
+          .getElementById("fill-form-new-template-equitment-name")
+          .value.trim();
+        const techName = document.getElementById("fill-form-tech-select").value;
+        const dutyName = document.getElementById("fill-form-duty-select").value;
+        const thirdParty = document
+          .getElementById("fill-form-thirdparty-name")
+          .value.trim();
+
+        if (!equipmentName || !techName || !dutyName || !thirdParty) {
+          console.log(equipmentName);
+          console.log(techName);
+          console.log(dutyName);
+          console.log(thirdParty);
+          showCustomToast(
+            "Vui lòng điền đầy đủ các thông tin bắt buộc trước khi lưu phiếu (trừ ghi chú)!",
+            "warning",
+          );
+          return;
+        }
+
         currentFillTemplate.questions.forEach((q, qidx) => {
           let val = "";
           const qType = q.type || "option";
@@ -4221,9 +4262,13 @@ requestAnimationFrame(() => {
             val = el ? el.value.trim() : "";
           }
 
-          if (q.required && !val) {
+          if (!val) {
             valid = false;
-            showCustomToast(`Bước ${qidx + 1} yêu cầu bắt buộc!`, "warning");
+            showCustomToast(
+              `Bước ${qidx + 1} chưa được điền đầy đủ!`,
+              "warning",
+            );
+            return;
           }
 
           const note = document
@@ -4234,19 +4279,14 @@ requestAnimationFrame(() => {
 
         if (!valid) return;
 
-        const techName = document.getElementById("fill-form-tech-select").value;
-        const dutyName = document.getElementById("fill-form-duty-select").value;
-        const thirdParty = document
-          .getElementById("fill-form-thirdparty-name")
-          .value.trim();
-
         const submissionId = "sub-" + Date.now();
         const payload = {
           id: submissionId,
           taskId: currentFillTaskId,
           templateId: currentFillTemplate.id,
           templateName: currentFillTemplate.name,
-          system: currentFillTemplate.system, // Đồng bộ thư mục lưu trữ hệ thống chính xác
+          system: currentFillTemplate.system, // Đồng bộ thư mục lưu trữ hệ thống chính xác,
+          equitmentName: equipmentName,
           dateSubmitted: new Date().toLocaleDateString("vi-VN"),
           responses: responses,
           photos: formPhotosDataUrls,
@@ -4272,6 +4312,15 @@ requestAnimationFrame(() => {
           task.progress = "Hoàn thành";
         }
 
+        const existingSubmissionIndex = state.formSubmissions.findIndex(
+          (item) => item.id === submissionId,
+        );
+        if (existingSubmissionIndex >= 0) {
+          state.formSubmissions[existingSubmissionIndex] = payload;
+        } else {
+          state.formSubmissions.push(payload);
+        }
+
         if (isCloudActive) {
           db.collection("form_submissions")
             .doc(submissionId)
@@ -4280,7 +4329,6 @@ requestAnimationFrame(() => {
               showCustomToast("Đã lưu phiếu bảo trì trực tuyến!", "success");
             });
         } else {
-          state.formSubmissions.push(payload);
           showCustomToast("Đã lưu phiếu bảo trì vào bộ nhớ!", "success");
         }
 
@@ -4288,6 +4336,10 @@ requestAnimationFrame(() => {
         closeFillFormModal();
         renderWeeklyPlanTable();
         renderSubmittedFormsList();
+
+        // clear ô input
+        document.getElementById("fill-form-new-template-equitment-name").value =
+          "";
       };
 
       document.getElementById("login-form").onsubmit = function (e) {
@@ -4475,119 +4527,180 @@ requestAnimationFrame(() => {
         showCustomToast("Đã chèn thêm dòng trực mới cho ngày!", "success");
       }
 
-      function createNewNextWeek() {
-        if (!state.weeks) state.weeks = [];
-        // Tìm số tuần lớn nhất hiện có để tăng liên tục (24 -> 25 -> 26)
-        let maxNum = 23;
-        state.weeks.forEach((w) => {
-          const m = w.match(/Tuần\s+(\d+)/);
-          if (m) {
-            const v = parseInt(m[1]);
-            if (!isNaN(v) && v > maxNum) maxNum = v;
-          }
-        });
+      function getISOWeek(date) {
+        const d = new Date(date);
 
-        const nextNum = maxNum + 1;
+        d.setHours(0, 0, 0, 0);
 
-        // Lấy ngày kết thúc của tuần trước (nếu có) từ chuỗi tuần định dạng: "Tuần 23 (01/06 - 07/06/2026)"
-        const prevWeek = state.weeks[state.weeks.length - 1] || "";
-        let prevEndDate = null;
-        if (prevWeek) {
-          const m = prevWeek.match(/(\d{2}\/\d{2}\/\d{4})/);
-          if (m) {
-            const parts = m[1].split("/");
-            prevEndDate = new Date(
-              parseInt(parts[2], 10),
-              parseInt(parts[1], 10) - 1,
-              parseInt(parts[0], 10),
-            );
-          } else {
-            // fallback: try to match patterns like (01/06 - 07/06/2026)
-            const m2 = prevWeek.match(
-              /(\d{2}\/\d{2})\s*-\s*(\d{2}\/\d{2}\/\d{4})/,
-            );
-            if (m2) {
-              const parts = m2[2].split("/");
-              prevEndDate = new Date(
-                parseInt(parts[2], 10),
-                parseInt(parts[1], 10) - 1,
-                parseInt(parts[0], 10),
-              );
-            }
-          }
-        }
+        d.setDate(d.getDate() + 4 - (d.getDay() || 7));
 
-        // Nếu không tìm thấy trong chuỗi tuần, fallback lấy ngày lớn nhất trong tasks
-        if (!prevEndDate) {
-          const dates = state.tasks.map((t) => t.date).filter(Boolean);
-          if (dates.length > 0) {
-            const maxTime = Math.max(
-              ...dates.map((d) => new Date(d).getTime()),
-            );
-            prevEndDate = new Date(maxTime);
-          }
-        }
+        const yearStart = new Date(d.getFullYear(), 0, 1);
 
-        // Nếu vẫn không có, dùng ngày hôm nay làm tham chiếu
-        if (!prevEndDate) prevEndDate = new Date();
-
-        // Bắt đầu tuần mới là ngày tiếp theo sau prevEndDate
-        const startDate = new Date(prevEndDate);
-        startDate.setDate(startDate.getDate() + 1);
-        const endDate = new Date(startDate);
-        endDate.setDate(endDate.getDate() + 6);
-
-        const fmt = (d, withYear = false) => {
-          const dd = String(d.getDate()).padStart(2, "0");
-          const mm = String(d.getMonth() + 1).padStart(2, "0");
-          const yyyy = d.getFullYear();
-          return withYear ? `${dd}/${mm}/${yyyy}` : `${dd}/${mm}`;
-        };
-
-        const newWeekStr = `Tuần ${nextNum} (${fmt(startDate)} - ${fmt(endDate, true)})`;
-
-        // Thêm tuần và tạo sẵn 7 dòng (từ thứ 2 -> chủ nhật tương ứng)
-        state.weeks.push(newWeekStr);
-        activeWeekFilterVal = newWeekStr;
-
-        for (let i = 0; i < 7; i++) {
-          const d = new Date(startDate);
-          d.setDate(startDate.getDate() + i);
-          const iso = d.toISOString().slice(0, 10);
-
-          // tránh tạo trùng nếu đã có dòng cùng ngày
-          const exists = state.tasks.some(
-            (t) => t.date === iso && t.weekNum === newWeekStr,
-          );
-          if (exists) continue;
-
-          const newT = {
-            id: `task-${Date.now()}-${i}`,
-            weekNum: newWeekStr,
-            date: iso,
-            shift: "Ca A",
-            group: "Bảo Trì",
-            area: "",
-            content: "",
-            photos: [],
-            formTemplateId: "",
-            formFilledId: null,
-            assignees: [],
-            progress: "Đang thực hiện",
-            note: "",
-            sheetLinks: [],
-          };
-          state.tasks.push(newT);
-        }
-
-        saveState();
-        setupWeeklyFilters();
-        renderWeeklyPlanTable();
-        showCustomToast(
-          `Đã tạo tuần trực ${newWeekStr} với 7 dòng ngày tự động.`,
-          "success",
-        );
+        return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
       }
+
+      function createNewNextWeek() {
+  if (!state.weeks) state.weeks = [];
+  if (!state.tasks) state.tasks = [];
+
+  // ===== Helpers =====
+  function toISODate(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  function formatDate(date, includeYear = false) {
+    const dd = String(date.getDate()).padStart(2, "0");
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const yyyy = date.getFullYear();
+
+    return includeYear
+      ? `${dd}/${mm}/${yyyy}`
+      : `${dd}/${mm}`;
+  }
+
+  // ISO Week Number
+  function getISOWeek(date) {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+
+    d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+
+    const yearStart = new Date(d.getFullYear(), 0, 1);
+
+    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  }
+
+  // Lấy thứ 2 của tuần hiện tại
+  function getMonday(date) {
+    const d = new Date(date);
+    const day = d.getDay(); // CN=0
+
+    const diff = day === 0 ? -6 : 1 - day;
+
+    d.setDate(d.getDate() + diff);
+    d.setHours(0, 0, 0, 0);
+
+    return d;
+  }
+
+  // Parse:
+  // Tuần 29 (13/07 - 19/07/2026)
+  function parseWeek(str) {
+    const match = str.match(
+      /Tuần\s+(\d+)\s*\((\d{2})\/(\d{2})\s*-\s*(\d{2})\/(\d{2})\/(\d{4})\)/
+    );
+
+    if (!match) return null;
+
+    const weekNumber = Number(match[1]);
+
+    const startDate = new Date(
+      Number(match[6]),
+      Number(match[3]) - 1,
+      Number(match[2])
+    );
+
+    const endDate = new Date(
+      Number(match[6]),
+      Number(match[5]) - 1,
+      Number(match[4])
+    );
+
+    return {
+      weekNumber,
+      startDate,
+      endDate,
+    };
+  }
+
+  // =======================================
+
+  let nextWeekNumber;
+  let startDate;
+  let endDate;
+
+  // ========= Không có tuần =========
+  if (state.weeks.length === 0) {
+    const today = new Date();
+
+    const monday = getMonday(today);
+
+    nextWeekNumber = getISOWeek(today) + 1;
+
+    startDate = new Date(monday);
+    startDate.setDate(startDate.getDate() + 7);
+
+    endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 6);
+  }
+
+  // ========= Đã có tuần =========
+  else {
+    const lastWeek = parseWeek(state.weeks[state.weeks.length - 1]);
+
+    if (!lastWeek) {
+      showCustomToast("Không đọc được dữ liệu tuần cuối!", "error");
+      return;
+    }
+
+    nextWeekNumber = lastWeek.weekNumber + 1;
+
+    startDate = new Date(lastWeek.endDate);
+    startDate.setDate(startDate.getDate() + 1);
+
+    endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 6);
+  }
+
+  const weekLabel =
+    `Tuần ${nextWeekNumber} (` +
+    `${formatDate(startDate)} - ${formatDate(endDate, true)})`;
+
+  state.weeks.push(weekLabel);
+
+  activeWeekFilterVal = weekLabel;
+
+  // ====== Tạo 7 dòng mặc định ======
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(startDate);
+    d.setDate(startDate.getDate() + i);
+
+    const iso = toISODate(d);
+
+    const existed = state.tasks.some(
+      (t) => t.weekNum === weekLabel && t.date === iso
+    );
+
+    if (existed) continue;
+
+    state.tasks.push({
+      id: `task-${Date.now()}-${i}`,
+      weekNum: weekLabel,
+      date: iso,
+      shift: "Ca A",
+      group: "Bảo Trì",
+      area: "",
+      content: "",
+      photos: [],
+      formTemplateId: "",
+      formFilledId: null,
+      assignees: [],
+      progress: "",
+      note: "",
+      sheetLinks: [],
+    });
+  }
+
+  saveState();
+  setupWeeklyFilters();
+  renderWeeklyPlanTable();
+
+  showCustomToast(`Đã tạo ${weekLabel}`, "success");
+}
 
       function updateTaskSystem(taskId, systemVal) {
         const t = state.tasks.find((x) => x.id === taskId);
@@ -4613,6 +4726,9 @@ requestAnimationFrame(() => {
       function updateTaskField(id, field, val) {
         const t = state.tasks.find((x) => x.id === id);
         if (t) {
+          if (field === "formTemplateId" && t[field] !== val) {
+            t.formFilledId = null;
+          }
           t[field] = val;
           saveState();
         }
@@ -4754,6 +4870,10 @@ requestAnimationFrame(() => {
         );
       }
 
+      function getActiveFolderForForms() {
+        return state.currentFolder || "";
+      }
+
       function renderFolderTree() {
         const container = document.getElementById("folders-tree-container");
         if (!container) return;
@@ -4769,7 +4889,6 @@ requestAnimationFrame(() => {
           ...state.folders,
         ];
 
-        // chỉ lấy folder cha
         const activeClasses =
           "rounded-xl transition bg-blue-50 text-blue-700 font-extrabold border-l-4 border-blue-600";
 
@@ -4780,8 +4899,6 @@ requestAnimationFrame(() => {
             return s.system === folder.name;
           }).length;
 
-          // console.log("Folder:", folder.name, "Count:", formCount);
-          // Kiểm tra xem folder cha này có đang được chọn không
           const isActive =
             state.currentFolder === folder.name ? activeClasses : "";
 
@@ -4818,11 +4935,9 @@ requestAnimationFrame(() => {
         </div>
       `;
 
-          // render folder con
           const children = allFolders.filter((f) => f.parent === folder.name);
 
           children.forEach((child) => {
-            // Kiểm tra xem folder con này có đang được chọn không
             const isChildActive =
               state.currentFolder === child.name ? activeClasses : "";
 
@@ -4908,14 +5023,13 @@ requestAnimationFrame(() => {
         }
 
         formsOfMonth.forEach((sub) => {
+          console.log(sub);
           container.innerHTML += `
             <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2 text-xs flex flex-col justify-between hover:border-blue-300 transition">
-              <div>
-                <div class="flex justify-between items-start">
-                  <h4 class="font-extrabold text-slate-800 text-sm">${sub.templateName}</h4>
-                  <span class="bg-indigo-100 text-indigo-800 text-[9px] font-black px-1.5 py-0.5 rounded-full">${sub.code}</span>
-                </div>
-                <p class="text-[10px] text-slate-400 mt-1">Ngày nộp: ${sub.dateSubmitted}</p>
+              <div class="flex flex-col gap-[5px]">
+                <h4 class="font-extrabold text-slate-800 text-sm">${sub.templateName}</h4>
+                <p class="text-[10px] text-slate-400"> Tên thiết bị: ${sub.equitmentName}</p>
+                <p class="text-[10px] text-slate-400">Ngày nộp: ${sub.dateSubmitted}</p>
                 <p class="text-[10px] text-slate-500 font-semibold">Nhân viên: ${sub.techs ? sub.techs.join(", ") : ""}</p>
               </div>
               <div class="flex gap-2 pt-2 border-t justify-end">
@@ -4928,14 +5042,63 @@ requestAnimationFrame(() => {
         });
       }
 
-      function renderMaintenanceForms() {
+      function updateTemplateStorageFolderOptions(selectedChildName = "") {
         const sysSelect = document.getElementById("new-template-system");
-        if (sysSelect) {
-          sysSelect.innerHTML = "";
-          predefinedSystems.forEach((sys) => {
-            sysSelect.innerHTML += `<option value="${sys}">${sys}</option>`;
-          });
+        const childSelect = document.getElementById(
+          "new-template-child-system",
+        );
+        if (!sysSelect || !childSelect) return;
+
+        const rootFolders = [
+          ...new Set([
+            ...predefinedSystems,
+            ...(state.folders || [])
+              .filter((folder) => folder.parent === "root")
+              .map((folder) => folder.name),
+          ]),
+        ];
+
+        const currentParentValue = sysSelect.value || "";
+        const matchingFolder = (state.folders || []).find(
+          (folder) => folder.name === selectedChildName,
+        );
+        const parentValue = matchingFolder
+          ? matchingFolder.parent
+          : currentParentValue || "";
+
+        sysSelect.innerHTML = "";
+        rootFolders.forEach((sys) => {
+          const isSelected = sys === parentValue ? "selected" : "";
+          sysSelect.innerHTML += `<option value="${sys}" ${isSelected}>${sys}</option>`;
+        });
+
+        if (!sysSelect.value && rootFolders.length > 0) {
+          sysSelect.value = rootFolders[0];
         }
+
+        childSelect.innerHTML =
+          '<option value="">Không chọn (dùng thư mục cha)</option>';
+        const children = (state.folders || []).filter(
+          (folder) => folder.parent === sysSelect.value,
+        );
+
+        children.forEach((child) => {
+          const isSelected = child.name === selectedChildName ? "selected" : "";
+          childSelect.innerHTML += `<option value="${child.name}" ${isSelected}>${child.name}</option>`;
+        });
+
+        if (
+          selectedChildName &&
+          !children.some((child) => child.name === selectedChildName)
+        ) {
+          childSelect.value = "";
+        } else if (selectedChildName) {
+          childSelect.value = selectedChildName;
+        }
+      }
+
+      function renderMaintenanceForms() {
+        updateTemplateStorageFolderOptions();
 
         const qWorkspace = document.getElementById("new-template-questions");
         if (qWorkspace) {
@@ -4985,7 +5148,7 @@ requestAnimationFrame(() => {
               <div class="bg-slate-50 p-3 rounded-xl border flex justify-between items-center text-xs shadow-sm">
                 <div>
                   <h4 class="font-extrabold">${t.name}</h4>
-                  <span class="text-[10px] text-slate-400">Mã: ${t.code} | Hệ: ${t.system}</span>
+                  <span class="text-[10px] text-slate-400">${t.system}</span>
                 </div>
                 <div class="flex items-center gap-5">
                   <button onclick="previewFormTemplate('${t.id}')" class="text-indigo-600 font-extrabold">Xem trước</button>
@@ -5038,7 +5201,13 @@ requestAnimationFrame(() => {
       }
       function saveFormTemplate() {
         const name = document.getElementById("new-template-name").value.trim();
-        const system = document.getElementById("new-template-system").value;
+        const parentSystemName = document.getElementById(
+          "new-template-system",
+        ).value;
+        const childSystemName = document.getElementById(
+          "new-template-child-system",
+        ).value;
+        const systemName = childSystemName || parentSystemName;
 
         if (!name) {
           showCustomToast("Hãy điền tên biểu mẫu!", "error");
@@ -5048,7 +5217,7 @@ requestAnimationFrame(() => {
         const tmplObj = {
           id: "tmpl-" + Date.now(),
           name: name,
-          system: system,
+          system: systemName,
           questions: JSON.parse(JSON.stringify(newTmplQuestions)),
         };
 
@@ -5058,6 +5227,9 @@ requestAnimationFrame(() => {
 
         showCustomToast(`Đã lưu cấu hình biểu mẫu "${name}" mới!`, "success");
         logAction("Thiết kế biểu mẫu", `Tạo mới biểu mẫu: ${name}`);
+
+        // clear giữ liệu trước đó
+        document.getElementById("new-template-name").value = "";
       }
 
       function previewFormTemplate(tmplId) {
@@ -5104,13 +5276,18 @@ requestAnimationFrame(() => {
         if (nameInput) nameInput.value = tmpl.name;
         if (codeInput) codeInput.value = tmpl.code;
         if (sysSelect) {
+          const folderMatch = (state.folders || []).find(
+            (folder) => folder.name === tmpl.system,
+          );
+          const parentValue = folderMatch ? folderMatch.parent : tmpl.system;
           const optionExists = Array.from(sysSelect.options).some(
-            (opt) => opt.value === tmpl.system,
+            (opt) => opt.value === parentValue,
           );
           if (!optionExists) {
-            sysSelect.innerHTML += `<option value="${tmpl.system}">${tmpl.system}</option>`;
+            sysSelect.innerHTML += `<option value="${parentValue}">${parentValue}</option>`;
           }
-          sysSelect.value = tmpl.system;
+          sysSelect.value = parentValue;
+          updateTemplateStorageFolderOptions(folderMatch ? tmpl.system : "");
         }
 
         showCustomToast("Đã nạp biểu mẫu để chỉnh sửa.", "info");
@@ -6432,7 +6609,7 @@ requestAnimationFrame(() => {
               settings: state.settings,
               auditLogs: state.auditLogs,
               adminNotifications: state.adminNotifications,
-              formSubmissions:state.formSubmissions
+              formSubmissions: state.formSubmissions,
             },
           };
 
@@ -6511,6 +6688,8 @@ requestAnimationFrame(() => {
               renderMaintenanceForms();
               renderAdminConfig();
               renderKpiDashboard();
+              renderSubmittedFormsList();
+              renderFolderTree();
 
               input.value = ""; // Xoá input để chọn lại file
 
