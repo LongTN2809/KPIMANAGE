@@ -6540,7 +6540,7 @@
               qrbox: 250,
             },
             (decodedText) => {
-              document.getElementById("new-template-equitment-name").value =
+              document.getElementById("fill-form-new-template-equitment-name").value =
                 decodedText.trim();
 
               closeQrScanner();
@@ -6576,7 +6576,7 @@
         html5QrCode
           .scanFile(file, false)
           .then((decodedText) => {
-            document.getElementById("new-template-equitment-name").value =
+            document.getElementById("fill-form-new-template-equitment-name").value =
               decodedText.trim();
 
             showCustomToast("Đã đọc QR thành công!", "success");
