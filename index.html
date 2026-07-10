@@ -2643,10 +2643,38 @@
           return;
         }
 
-        // Sắp xếp trước khi gộp rowspan
+        // Sắp xếp trước khi gộp rowspan: theo Ngày, sau đó gom ổn định theo Ca làm -> Nhóm
+        // (nhóm nào xuất hiện trước trong dữ liệu gốc thì đứng trước)
+        function stableGroupSort(arr, keyFns) {
+          if (keyFns.length === 0) return arr;
+          const [keyFn, ...rest] = keyFns;
+          const groups = [];
+          const groupMap = new Map();
+          arr.forEach((item) => {
+            const key = keyFn(item);
+            if (!groupMap.has(key)) {
+              const group = [];
+              groupMap.set(key, group);
+              groups.push(group);
+            }
+            groupMap.get(key).push(item);
+          });
+          return groups.flatMap((group) => stableGroupSort(group, rest));
+        }
+
         filteredTasks.sort((a, b) => {
-          if (typeof a.date === "string") return a.date.localeCompare(b.date);
+          if (typeof a.date === "string" && typeof b.date === "string") {
+            return a.date.localeCompare(b.date);
+          }
+          return 0;
         });
+        const sortedTasks = stableGroupSort(filteredTasks, [
+          (t) => t.date,
+          (t) => t.shift,
+          (t) => t.group,
+        ]);
+        filteredTasks.length = 0;
+        filteredTasks.push(...sortedTasks);
 
         const dateSpans = new Array(filteredTasks.length).fill(0);
         let i = 0;
@@ -2675,6 +2703,22 @@
           }
           shiftSpans[j] = count;
           j += count;
+        }
+
+        const groupSpans = new Array(filteredTasks.length).fill(0);
+        let k = 0;
+        while (k < filteredTasks.length) {
+          let count = 1;
+          while (
+            k + count < filteredTasks.length &&
+            filteredTasks[k].group === filteredTasks[k + count].group &&
+            filteredTasks[k].shift === filteredTasks[k + count].shift &&
+            filteredTasks[k].date === filteredTasks[k + count].date
+          ) {
+            count++;
+          }
+          groupSpans[k] = count;
+          k += count;
         }
 
         filteredTasks.forEach((task, idx) => {
@@ -2867,19 +2911,26 @@
                 "bg-slate-100 text-slate-700 border border-slate-200";
           }
 
+          let groupCellHTML = "";
+          if (groupSpans[idx] > 0) {
+            groupCellHTML = `
+              <td data-col="2" class="w-[100px] min-w-[100px] bg-white z-20 p-2 border-r" rowspan="${groupSpans[idx]}">
+                <select 
+                  onchange="updateTaskField('${task.id}', 'group', this.value)" 
+                  class="w-full text-center text-[11px] font-black uppercase tracking-wider px-2 pr-8 py-1.5 rounded-lg transition-all cursor-pointer focus:outline-none ${groupBadgeClass}"
+                >
+                  <option value="Vận Hành" ${task.group === "Vận Hành" ? "selected" : ""}>Vận Hành</option>
+                  <option value="Bảo Trì" ${task.group === "Bảo Trì" ? "selected" : ""}>Bảo Trì</option>
+                  <option value="Carpenter" ${task.group === "Carpenter" ? "selected" : ""}>Carpenter</option>
+                </select>
+              </td>
+            `;
+          }
+
           tr.innerHTML = `
             ${dayColHTML}
             ${shiftCellHTML}
-            <td data-col="2" class="w-[100px] min-w-[100px] bg-white z-20 p-2 border-r">
-           <select 
-              onchange="updateTaskField('${task.id}', 'group', this.value)" 
-              class="w-full text-center text-[11px] font-black uppercase tracking-wider px-2 pr-8 py-1.5 rounded-lg transition-all cursor-pointer focus:outline-none ${groupBadgeClass}"
-            >
-              <option value="Vận Hành" ${task.group === "Vận Hành" ? "selected" : ""}>Vận Hành</option>
-              <option value="Bảo Trì" ${task.group === "Bảo Trì" ? "selected" : ""}>Bảo Trì</option>
-              <option value="Carpenter" ${task.group === "Carpenter" ? "selected" : ""}>Carpenter</option>
-            </select>
-            </td>
+            ${groupCellHTML}
             <td data-col="3" class="p-2 border-r">
               <textarea onchange="updateTaskField('${task.id}', 'area', this.value)" class="bg-transparent border-b border-transparent focus:border-blue-500 outline-none w-full font-bold text-slate-700 resize-none">${task.area || ""}</textarea>
             </td>
@@ -4122,6 +4173,7 @@
       document.addEventListener("DOMContentLoaded", () => {
         initSignaturePads(); // Gọi hàm gắn sự kiện mousedown ,... cho vùng ký tên
       });
+
       function fillTaskForm(taskId) {
         const task = state.tasks.find((t) => t.id === taskId);
         if (!task) return;
@@ -4131,6 +4183,14 @@
         currentFillTaskId = taskId;
         currentFillTemplate = tmpl;
         formPhotosDataUrls = [];
+
+        const photosPreview = document.getElementById(
+          "fill-form-photos-preview",
+        );
+        if (photosPreview) photosPreview.innerHTML = "";
+
+        const photosInput = document.getElementById("fill-form-photos"); // đổi thành đúng id input file của bạn
+        if (photosInput) photosInput.value = "";
 
         document.getElementById("fill-form-title").innerText =
           `Kiểm tra: ${tmpl.name}`;
@@ -4202,6 +4262,7 @@
 
             if (canvas && ctx) {
               resizeSignatureCanvas(canvas, ctx);
+              sigSigned[type] = false;
             }
           });
         });
@@ -4235,17 +4296,20 @@
           .value.trim();
         const techName = document.getElementById("fill-form-tech-select").value;
         const dutyName = document.getElementById("fill-form-duty-select").value;
-        const thirdParty = document
-          .getElementById("fill-form-thirdparty-name")
-          .value.trim();
+        const thirdParty = document.getElementById("fill-form-thirdparty-name").value.trim();
+        const proofImg = document.getElementById("fill-form-photos").value;
 
-        if (!equipmentName || !techName || !dutyName || !thirdParty) {
-          console.log(equipmentName);
-          console.log(techName);
-          console.log(dutyName);
-          console.log(thirdParty);
+        if (!equipmentName || !techName || !dutyName || !thirdParty || !proofImg) {
           showCustomToast(
             "Vui lòng điền đầy đủ các thông tin bắt buộc trước khi lưu phiếu (trừ ghi chú)!",
+            "warning",
+          );
+          return;
+        }
+
+        if (!sigSigned.tech || !sigSigned.duty || !sigSigned.thirdparty) {
+          showCustomToast(
+            "Vui lòng ký đầy đủ chữ ký (Kỹ thuật, Trực ca, Bên thứ ba) trước khi lưu phiếu!",
             "warning",
           );
           return;
@@ -6171,6 +6235,7 @@
 
       let sigCanvases = { tech: null, duty: null, thirdparty: null };
       let sigCtxs = { tech: null, duty: null, thirdparty: null };
+      let sigSigned = { tech: false, duty: false, thirdparty: false };
 
       function initSignaturePads() {
         ["tech", "duty", "thirdparty"].forEach((type) => {
@@ -6206,6 +6271,7 @@
             ctx.stroke();
             lastX = pos.x;
             lastY = pos.y;
+            sigSigned[type] = true;
           };
           window.addEventListener("mouseup", () => (drawing = false));
 
@@ -6231,6 +6297,7 @@
               ctx.stroke();
               lastX = pos.x;
               lastY = pos.y;
+              sigSigned[type] = true;
               e.preventDefault();
             },
             { passive: false },
