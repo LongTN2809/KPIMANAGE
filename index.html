@@ -3074,7 +3074,7 @@
               <div class="flex justify-center items-center gap-3">
                 <button onclick="insertRowBelow('${task.id}')" class="text-blue-500 hover:text-blue-700" title="Chèn dòng"><i class="fa-solid fa-plus-circle text-sm"></i></button>
                 <button onclick="deleteTaskRow('${task.id}')" class="text-rose-500 hover:text-rose-700" title="Xóa dòng"><i class="fa-solid fa-trash-can text-sm"></i></button>
-                <button onclick="setVisibleTaskRow('${task.id}')" class="text-black-500" title="Ẩn hiện dòng"><i class="fa-solid fa-eye text-sm"></i></button>
+                <button id="hide-task-row-btn" onclick="setVisibleTaskRow('${task.id}')" class="text-black-500" title="Ẩn hiện dòng"><i class="fa-solid fa-eye text-sm"></i></button>
               </div>
             </td>
           `;
@@ -3107,7 +3107,7 @@
         <td class="p-2">${task.group || ""}</td>
         <td class="p-2">${task.content || "(Không có nội dung)"}</td>
         <td class="p-2 text-center">
-          <button onclick="setVisibleTaskRow('${task.id}', true)" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-[10px] font-black px-2 py-1 rounded border border-emerald-200">
+          <button id="show-task-row-btn onclick="setVisibleTaskRow('${task.id}', true)" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-[10px] font-black px-2 py-1 rounded border border-emerald-200">
             <i class="fa-solid fa-eye"></i> Hiện lại
           </button>
         </td>
@@ -4580,6 +4580,7 @@
         const kpiTabBtn = document.getElementById("tab-btn-kpi-dashboard");
         const adminBell = document.getElementById("admin-bell-wrapper");
         const visibleTaskRowBtn = document.getElementById("visible-task-row-btn");
+        const hideTaskRowBtn = documetn.getElementById("hide-task-row-btn");
         const showKpiForStaff =
           state.settings && state.settings.visibleTabs
             ? state.settings.visibleTabs.kpi
@@ -4596,13 +4597,15 @@
           if (formsTabBtn) formsTabBtn.classList.remove("hidden");
           if (kpiTabBtn) kpiTabBtn.classList.remove("hidden");
           if(adminBell) adminBell.classList.remove("hidden");
-          if(visibleTaskRowBtn) visibleTaskRowBtn.classList.remove("hidden")
+          if(visibleTaskRowBtn) visibleTaskRowBtn.classList.remove("hidden");
+          if(hideTaskRowBtn) hideTaskRowBtn.classList.remove("hidden");
         } else {
           if (adminConfigBtn) adminConfigBtn.classList.add("hidden");
           if (createNextWeekBtn) createNextWeekBtn.classList.add("hidden");
           if (createBacklogBtn) createBacklogBtn.classList.add("hidden");
           if(adminBell) adminBell.classList.add("hidden");
-          if(visibleTaskRowBtn) visibleTaskRowBtn.classList.add("hidden")
+          if(visibleTaskRowBtn) visibleTaskRowBtn.classList.add("hidden");
+          if(hideTaskRowBtn) hideTaskRowBtn.classList.add("hidden");
 
           // Ẩn/Hiện Tab động theo cài đặt của Admin đối với tài khoản Nhân viên
           if (showFormsForStaff) {
