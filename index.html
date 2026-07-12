@@ -494,28 +494,62 @@
               >
                 <i class="fa-solid fa-file-excel"></i> Tải Excel Tuần
               </button>
+              <button id="visible-task-row-btn"
+                onclick="
+                  document
+                    .getElementById('hidden-tasks-panel')
+                    .classList.toggle('hidden');
+                  renderHiddenTasksTable();
+                "
+                class="bg-slate-600 hover:bg-slate-700 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl shadow-md flex items-center gap-1.5"
+              >
+                <i class="fa-solid fa-box-archive"></i> Việc đã ẩn
+                <span
+                  id="hidden-tasks-count"
+                  class="bg-white/20 rounded-full px-2 text-xs"
+                  ></span
+                >
+              </button>
             </div>
+          </div>
+
+          <!-- Khung render các công việc đã ẩn -->
+          <div
+            id="hidden-tasks-panel"
+            class="hidden mt-4 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
+          >
+            <div class="p-3 border-b bg-slate-50 font-bold text-sm">
+              Danh sách công việc đã ẩn
+            </div>
+            <table class="w-full text-left">
+              <thead class="bg-slate-50 text-[11px] uppercase text-slate-400">
+                <tr>
+                  <th class="p-2">Ngày</th>
+                  <th class="p-2">Ca</th>
+                  <th class="p-2">Nhóm</th>
+                  <th class="p-2">Nội dung</th>
+                  <th class="p-2 text-center">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="hidden-tasks-body"></tbody>
+            </table>
           </div>
 
           <div
             class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden relative"
           >
-            <div class="overflow-x-auto">
-              <table
-                class="text-left border-collapse min-w-[1550px]"
-                id="weekly-plan-table"
-              >
+            <div class="overflow-auto w-full max-h-[70vh]">
+              <table class="text-left border-collapse" id="weekly-plan-table">
                 <thead>
                   <tr
                     class="bg-slate-50 text-slate-400 text-[11px] font-bold tracking-wider uppercase border-b border-slate-200"
                   >
                     <th
                       data-col="0"
-                      class="z-30 bg-slate-50 w-[110px] min-w-[110px] p-3"
+                      class="sticky top-0 z-20 bg-slate-50 w-[150px] p-3 text-center font-bold"
                     >
                       <div class="flex items-center justify-between">
                         <span>Ngày</span>
-
                         <div class="flex items-center gap-1">
                           <i
                             data-freeze-pin
@@ -532,11 +566,10 @@
 
                     <th
                       data-col="1"
-                      class="w-[90px] min-w-[90px] bg-white z-20 p-2 text-center font-bold border-r"
+                      class="sticky top-0 z-20 bg-slate-50 w-[150px] p-3 text-center font-bold"
                     >
                       <div class="flex items-center justify-between">
                         <span>Ca làm</span>
-
                         <div class="flex items-center gap-1">
                           <i
                             data-freeze-pin
@@ -554,11 +587,10 @@
 
                     <th
                       data-col="2"
-                      class="z-30 bg-slate-50 w-[100px] min-w-[100px] p-3 border-r-2 border-r-slate-300"
+                      class="sticky top-0 z-20 bg-slate-50 w-[150px] p-3 text-center font-bold"
                     >
                       <div class="flex items-center justify-between">
                         <span>Nhóm</span>
-
                         <div class="flex items-center gap-1">
                           <i
                             data-freeze-pin
@@ -573,24 +605,53 @@
                         </div>
                       </div>
                     </th>
-                    <th data-col="3" class="w-[180px] p-3">Khu vực</th>
-                    <th data-col="4" class="w-[280px] p-3">
+
+                    <th
+                      data-col="3"
+                      class="sticky top-0 z-20 bg-slate-50 w-[130px] p-3 text-center font-bold"
+                    >
+                      Khu vực
+                    </th>
+                    <th
+                      data-col="4"
+                      class="sticky top-0 z-20 bg-slate-50 w-[130px] p-3 text-center font-bold"
+                    >
                       Nội dung công việc
                     </th>
-                    <th data-col="5" class="w-[120px] p-3 text-center">
+                    <th
+                      data-col="5"
+                      class="sticky top-0 z-20 bg-slate-50 w-[130px] p-3 text-center font-bold"
+                    >
                       Minh chứng
                     </th>
-                    <th data-col="6" class="w-[160px] p-3 text-center">
+                    <th
+                      data-col="6"
+                      class="sticky top-0 z-20 bg-slate-50 w-[130px] p-3 text-center font-bold"
+                    >
                       Form bảo trì
                     </th>
-                    <th data-col="7" class="w-[240px] p-3">Người thực hiện</th>
-                    <th data-col="6" class="w-[130px] p-3 text-center">
+                    <th
+                      data-col="7"
+                      class="sticky top-0 z-20 bg-slate-50 w-[140px] p-3 text-center font-bold"
+                    >
+                      Người thực hiện
+                    </th>
+                    <th
+                      data-col="6"
+                      class="sticky top-0 z-20 bg-slate-50 w-[140px] p-3 text-center font-bold"
+                    >
                       Tiến độ KPI
                     </th>
-                    <th data-col="7" class="w-[240px] p-3">
+                    <th
+                      data-col="7"
+                      class="sticky top-0 z-20 bg-slate-50 w-[140px] p-3 text-center font-bold"
+                    >
                       Ghi chú & Google Sheet
                     </th>
-                    <th data-col="10" class="w-[90px] p-3 text-center">
+                    <th
+                      data-col="10"
+                      class="sticky top-0 z-20 bg-slate-50 w-[100px] p-3 text-center font-bold"
+                    >
                       Thao tác
                     </th>
                   </tr>
@@ -1589,6 +1650,8 @@
               <option value="Technician">Technician</option>
               <option value="Carpenter">Carpenter</option>
               <option value="Admin">Admin</option>
+              <option value="Event">Event</option>
+              <option value="Defect">Defect</option>
             </select>
           </div>
           <div>
@@ -2110,9 +2173,8 @@
           code: "CT-01",
           questions: [
             {
-              question: "THỰC HIỆN LOTO",
-              description:
-                "1. Chuyển Switch tủ điện sang vị trí off Chiller\n2. Off CB chính...\n3. Dán cảnh báo",
+              question: "",
+              description: "",
               required: true,
               type: "option",
               options: ["YES", "NO", "N/A"],
@@ -2316,8 +2378,8 @@
 
       let newTmplQuestions = [
         {
-          question: "THỰC HIỆN LOTO",
-          description: "Bảo đảm an toàn điện",
+          question: "",
+          description: "",
           required: true,
           type: "option",
           options: ["YES", "NO", "N/A"],
@@ -2624,7 +2686,8 @@
           (t) =>
             t.weekNum === activeWeekFilterVal &&
             t.progress !== "Bàn giao" &&
-            t.progress !== "Làm lại",
+            t.progress !== "Làm lại" &&
+            !t.hidden,
         );
         if (filteredTasks.length === 0) {
           const weekFilter = document.getElementById("week-filter");
@@ -2645,22 +2708,35 @@
 
         // Sắp xếp trước khi gộp rowspan: theo Ngày, sau đó gom ổn định theo Ca làm -> Nhóm
         // (nhóm nào xuất hiện trước trong dữ liệu gốc thì đứng trước)
-        function stableGroupSort(arr, keyFns) {
+        // Sắp xếp trước khi gộp rowspan: theo Ngày, sau đó Ca làm theo thứ tự A -> N -> B -> C, rồi Nhóm
+        function stableGroupSort(arr, keyFns, compareFns = []) {
           if (keyFns.length === 0) return arr;
-          const [keyFn, ...rest] = keyFns;
+          const [keyFn, ...restKeyFns] = keyFns;
+          const [compareFn, ...restCompareFns] = compareFns;
+
           const groups = [];
           const groupMap = new Map();
           arr.forEach((item) => {
             const key = keyFn(item);
             if (!groupMap.has(key)) {
-              const group = [];
-              groupMap.set(key, group);
-              groups.push(group);
+              const wrapper = { key, group: [] };
+              groupMap.set(key, wrapper);
+              groups.push(wrapper);
             }
-            groupMap.get(key).push(item);
+            groupMap.get(key).group.push(item);
           });
-          return groups.flatMap((group) => stableGroupSort(group, rest));
+
+          if (typeof compareFn === "function") {
+            groups.sort((a, b) => compareFn(a.key, b.key));
+          }
+
+          return groups.flatMap(({ group }) =>
+            stableGroupSort(group, restKeyFns, restCompareFns),
+          );
         }
+
+        // Thứ tự ưu tiên hiển thị của Ca làm: A -> N -> B -> C
+        const shiftOrder = { "Ca A": 0, "Ca N": 1, "Ca B": 2, "Ca C": 3 };
 
         filteredTasks.sort((a, b) => {
           if (typeof a.date === "string" && typeof b.date === "string") {
@@ -2668,11 +2744,16 @@
           }
           return 0;
         });
-        const sortedTasks = stableGroupSort(filteredTasks, [
-          (t) => t.date,
-          (t) => t.shift,
-          (t) => t.group,
-        ]);
+
+        const sortedTasks = stableGroupSort(
+          filteredTasks,
+          [(t) => t.date, (t) => t.shift, (t) => t.group],
+          [
+            null, // Ngày: giữ nguyên thứ tự đã sort tăng dần ở trên
+            (a, b) => (shiftOrder[a] ?? 99) - (shiftOrder[b] ?? 99), // Ca làm: ép theo A -> N -> B -> C
+            null, // Nhóm: giữ theo thứ tự xuất hiện đầu tiên như cũ
+          ],
+        );
         filteredTasks.length = 0;
         filteredTasks.push(...sortedTasks);
 
@@ -2759,15 +2840,19 @@
           switch (task.shift) {
             case "Ca A":
               groupdBadgeClassShift =
-                "bg-blue-100 text-blue-700 border border-blue-300";
+                "bg-red-100 text-red-700 border border-red-300";
               break;
             case "Ca B":
               groupdBadgeClassShift =
-                "bg-amber-100 text-amber-700 border border-amber-300";
+                "bg-purple-100 text-purple-700 border border-purple-300";
               break;
             case "Ca C":
               groupdBadgeClassShift =
-                "bg-purple-100 text-purple-700 border border-purple-300";
+                "bg-blue-100 text-blue-700 border border-blue-300";
+              break;
+            case "Ca N":
+              groupdBadgeClassShift =
+                "bg-amber-100 text-amber-700 border border-amber-300";
               break;
             default:
               groupdBadgeClassShift =
@@ -2776,11 +2861,10 @@
 
           let shiftCellHTML = "";
           if (shiftSpans[idx] > 0) {
-            console.log(task.shift);
             shiftCellHTML = `
               <td data-col="1" class="w-[90px] min-w-[90px] bg-white z-20 p-2 text-center font-bold border-r" rowspan="${shiftSpans[idx]}">
                 <select onchange="updateTaskField('${task.id}', 'shift', this.value)" class="w-full text-center text-[11px] font-black uppercase tracking-wider px-2 pr-8 py-1.5 rounded-lg transition-all cursor-pointer focus:outline-none ${groupdBadgeClassShift}">
-                  <option value="" ${!task.shift ? "selected" : ""} disabled>Chọn ca</option>
+                  <option value="" ${!task.shift ? "selected" : ""}>Chọn ca</option>
                   <option value="Ca A" ${task.shift === "Ca A" ? "selected" : ""}>Ca A</option>
                   <option value="Ca B" ${task.shift === "Ca B" ? "selected" : ""}>Ca B</option>
                   <option value="Ca C" ${task.shift === "Ca C" ? "selected" : ""}>Ca C</option>
@@ -2964,7 +3048,7 @@
             </td>
             <td data-col="8" class="p-2 text-center border-r">
               <select onchange="updateTaskProgress('${task.id}', this.value)" class="p-1 border rounded-lg font-black text-[11px] ${task.progress === "Hoàn thành" ? "bg-emerald-100 text-emerald-800" : task.progress === "Làm lại" ? "bg-rose-100 text-rose-800" : task.progress === "Bàn giao" ? "bg-amber-100 text-amber-800" : task.progress === "Đang thực hiện" ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-black"}">
-                <option value="" selected>Chọn tiến độ</option>
+                <option value="" ${!task.progress ? "selected" : ""}>Chọn tiến độ</option>
                 <option value="Đang thực hiện" ${task.progress === "Đang thực hiện" ? "selected" : ""}>Đang thực hiện</option>
                 <option value="Hoàn thành" ${task.progress === "Hoàn thành" ? "selected" : ""}>Hoàn thành</option>
                 <option value="Làm lại" ${task.progress === "Làm lại" ? "selected" : ""}>Làm lại</option>
@@ -2987,15 +3071,50 @@
               </div>
             </td>
             <td data-col="10" class="p-2 text-center">
-              <div class="flex justify-center items-center gap-1.5">
+              <div class="flex justify-center items-center gap-3">
                 <button onclick="insertRowBelow('${task.id}')" class="text-blue-500 hover:text-blue-700" title="Chèn dòng"><i class="fa-solid fa-plus-circle text-sm"></i></button>
                 <button onclick="deleteTaskRow('${task.id}')" class="text-rose-500 hover:text-rose-700" title="Xóa dòng"><i class="fa-solid fa-trash-can text-sm"></i></button>
+                <button onclick="setVisibleTaskRow('${task.id}')" class="text-black-500" title="Ẩn hiện dòng"><i class="fa-solid fa-eye text-sm"></i></button>
               </div>
             </td>
           `;
           body.appendChild(tr);
         });
         applyFreezeColumns();
+        renderHiddenTasksTable();
+      }
+
+      function renderHiddenTasksTable() {
+        const container = document.getElementById("hidden-tasks-body");
+        if (!container) return; // panel chưa mở trên DOM thì bỏ qua
+
+        const hiddenTasks = state.tasks.filter((t) => t.hidden);
+
+        const countBadge = document.getElementById("hidden-tasks-count");
+        if (countBadge) countBadge.textContent = hiddenTasks.length;
+
+        if (hiddenTasks.length === 0) {
+          container.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400 font-semibold text-xs">Không có công việc nào bị ẩn.</td></tr>`;
+          return;
+        }
+
+        container.innerHTML = hiddenTasks
+          .map(
+            (task) => `
+      <tr class="border-b border-slate-200 hover:bg-slate-50 text-xs">
+        <td class="p-2 font-bold">${task.date || ""}</td>
+        <td class="p-2">${task.shift || ""}</td>
+        <td class="p-2">${task.group || ""}</td>
+        <td class="p-2">${task.content || "(Không có nội dung)"}</td>
+        <td class="p-2 text-center">
+          <button onclick="setVisibleTaskRow('${task.id}', true)" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-[10px] font-black px-2 py-1 rounded border border-emerald-200">
+            <i class="fa-solid fa-eye"></i> Hiện lại
+          </button>
+        </td>
+      </tr>
+    `,
+          )
+          .join("");
       }
 
       let freezeColCount = 0; // số cột đang ghim tính từ trái qua (0 = không ghim)
@@ -3582,9 +3701,9 @@
               <td class="p-2">
                 <select onchange="updateTaskFieldFromKpi('${t.id}', 'shift', this.value)" class="w-full border rounded p-1 bg-white font-bold text-slate-700">
                   <option value="Ca A" ${t.shift === "Ca A" ? "selected" : ""}>Ca A</option>
+                   <option value="Ca N" ${t.shift === "Ca N" ? "selected" : ""}>Ca N</option>
                   <option value="Ca B" ${t.shift === "Ca B" ? "selected" : ""}>Ca B</option>
                   <option value="Ca C" ${t.shift === "Ca C" ? "selected" : ""}>Ca C</option>
-                  <option value="Ca N" ${t.shift === "Ca N" ? "selected" : ""}>Ca N</option>
                 </select>
               </td>
               <td class="p-2"><input type="text" value="${t.area || ""}" onchange="updateTaskFieldFromKpi('${t.id}', 'area', this.value)" class="w-full border rounded p-1 bg-white font-bold text-slate-700" /></td>
@@ -4079,7 +4198,7 @@
           stepsHTML += `
             <div class="bg-slate-50 border p-3 rounded-xl">
               <div class="font-bold text-slate-800">${idx + 1}. ${r.step}</div>
-              <div class="mt-1">Kết quả: <span class="text-blue-600 font-extrabold">${r.val || "YES"}</span></div>
+              <div class="mt-1">Kết quả: <span class="text-blue-600 font-extrabold">${r.val || ""}</span></div>
               ${r.note ? `<div class="text-[11px] text-slate-500 italic mt-1">Ghi chú: ${r.note}</div>` : ""}
             </div>
           `;
@@ -4218,11 +4337,11 @@
             selectionHTML = `<div class="flex flex-wrap gap-2">`;
             opts.forEach((opt, oidx) => {
               selectionHTML += `
-                <label class="flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-2 rounded-xl cursor-pointer font-bold text-xs hover:bg-slate-100 transition shadow-sm">
-                  <input type="radio" name="response-select-${qidx}" value="${opt}" ${oidx === 0 ? "checked" : ""} class="text-blue-600 focus:ring-blue-500" />
-                  <span>${opt}</span>
-                </label>
-              `;
+    <label class="flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-2 rounded-xl cursor-pointer font-bold text-xs hover:bg-slate-100 transition shadow-sm">
+      <input type="radio" name="response-select-${qidx}" value="${opt}" class="text-blue-600 focus:ring-blue-500" />
+      <span>${opt}</span>
+    </label>
+  `;
             });
             selectionHTML += `</div>`;
           }
@@ -4296,10 +4415,18 @@
           .value.trim();
         const techName = document.getElementById("fill-form-tech-select").value;
         const dutyName = document.getElementById("fill-form-duty-select").value;
-        const thirdParty = document.getElementById("fill-form-thirdparty-name").value.trim();
+        const thirdParty = document
+          .getElementById("fill-form-thirdparty-name")
+          .value.trim();
         const proofImg = document.getElementById("fill-form-photos").value;
 
-        if (!equipmentName || !techName || !dutyName || !thirdParty || !proofImg) {
+        if (
+          !equipmentName ||
+          !techName ||
+          !dutyName ||
+          !thirdParty ||
+          !proofImg
+        ) {
           showCustomToast(
             "Vui lòng điền đầy đủ các thông tin bắt buộc trước khi lưu phiếu (trừ ghi chú)!",
             "warning",
@@ -4407,7 +4534,6 @@
         // clear ô input
         document.getElementById("fill-form-new-template-equitment-name").value =
           "";
-        document.getElementById("fill-form-thirdparty-name").value = "";
       };
 
       document.getElementById("login-form").onsubmit = function (e) {
@@ -4450,11 +4576,10 @@
         const adminConfigBtn = document.getElementById("tab-btn-admin-config");
         const createNextWeekBtn = document.getElementById("add-week-btn");
         const createBacklogBtn = document.getElementById("add-backlog-btn");
-        const formsTabBtn = document.getElementById(
-          "tab-btn-maintenance-forms",
-        );
+        const formsTabBtn = document.getElementById("tab-btn-maintenance-forms",);
         const kpiTabBtn = document.getElementById("tab-btn-kpi-dashboard");
-
+        const adminBell = document.getElementById("admin-bell-wrapper");
+        const visibleTaskRowBtn = document.getElementById("visible-task-row-btn");
         const showKpiForStaff =
           state.settings && state.settings.visibleTabs
             ? state.settings.visibleTabs.kpi
@@ -4470,14 +4595,14 @@
           if (createBacklogBtn) createBacklogBtn.classList.remove("hidden");
           if (formsTabBtn) formsTabBtn.classList.remove("hidden");
           if (kpiTabBtn) kpiTabBtn.classList.remove("hidden");
-          document
-            .getElementById("admin-bell-wrapper")
-            .classList.remove("hidden");
+          if(adminBell) adminBell.classList.remove("hidden");
+          if(visibleTaskRowBtn) visibleTaskRowBtn.classList.remove("hidden")
         } else {
           if (adminConfigBtn) adminConfigBtn.classList.add("hidden");
           if (createNextWeekBtn) createNextWeekBtn.classList.add("hidden");
           if (createBacklogBtn) createBacklogBtn.classList.add("hidden");
-          document.getElementById("admin-bell-wrapper").classList.add("hidden");
+          if(adminBell) adminBell.classList.add("hidden");
+          if(visibleTaskRowBtn) visibleTaskRowBtn.classList.add("hidden")
 
           // Ẩn/Hiện Tab động theo cài đặt của Admin đối với tài khoản Nhân viên
           if (showFormsForStaff) {
@@ -4936,6 +5061,19 @@
         );
       }
 
+      function setVisibleTaskRow(id, visible) {
+        const task = state.tasks.find((t) => t.id === id);
+        if (!task) return;
+
+        task.hidden = !visible;
+
+        // Dùng lại cơ chế lưu sẵn có của bạn cho field khác
+        updateTaskField(id, "hidden", task.hidden);
+
+        renderWeeklyPlanTable();
+        renderHiddenTasksTable();
+      }
+
       function getActiveFolderForForms() {
         return state.currentFolder || "";
       }
@@ -5257,7 +5395,7 @@
 
       function addNewQuestionInput() {
         newTmplQuestions.push({
-          question: "Hạng mục kiểm tra mới...",
+          question: "",
           description: "",
           required: true,
           type: "option",
@@ -5267,6 +5405,7 @@
       }
       function saveFormTemplate() {
         const name = document.getElementById("new-template-name").value.trim();
+        const qWorkspace = document.getElementById("new-template-questions");
         const parentSystemName = document.getElementById(
           "new-template-system",
         ).value;
@@ -5296,6 +5435,10 @@
 
         // clear giữ liệu trước đó
         document.getElementById("new-template-name").value = "";
+        newTmplQuestions = [
+          JSON.parse(JSON.stringify(defaultTemplates[0].questions[0])),
+        ];
+        renderMaintenanceForms();
       }
 
       function previewFormTemplate(tmplId) {
@@ -6181,6 +6324,8 @@
       window.closeRestoreBackupModal = closeRestoreBackupModal;
       window.initSignaturePads = initSignaturePads;
       window.resizeSignatureCanvas = resizeSignatureCanvas;
+      window.fillTableToContainer = fillTableToContainer;
+      window.setVisibleTaskRow = setVisibleTaskRow;
 
       function updateCloudStatus(status, errMessage = "") {
         const loginBadge = document.getElementById("login-cloud-status-badge");
@@ -6394,7 +6539,15 @@
         subtree: true,
       });
 
+      function updateTableWidth(table) {
+        const ths = table.querySelectorAll("thead th");
+        let total = 0;
+        ths.forEach((th) => (total += th.offsetWidth));
+        table.style.width = total + "px";
+      }
+
       function initTableResize(table) {
+        table.style.tableLayout = "fixed";
         // Tránh gắn resizer chồng lên nhau khi render lại
         table
           .querySelectorAll(".col-resizer, .row-resizer")
@@ -6420,6 +6573,7 @@
 
           resizer.addEventListener("mousedown", (e) => {
             e.preventDefault();
+            table.dataset.userResized = "true";
             startX = e.clientX;
             startW = th.offsetWidth;
             resizer.style.background = "#3b82f6";
@@ -6428,6 +6582,7 @@
               const nw = Math.max(150, startW + e2.clientX - startX);
               th.style.width = nw + "px";
               th.style.minWidth = nw + "px";
+              updateTableWidth(table);
             };
             const onUp = () => {
               resizer.style.background = "transparent";
@@ -6520,11 +6675,49 @@
         tbody._rowObserver = observer; // lưu lại để disconnect lần sau
         requestAnimationFrame(() => {
           updateStickyColumns();
+          fillTableToContainer(table);
         });
+        if (table._resizeObserver) table._resizeObserver.disconnect();
+        const resizeObserver = new ResizeObserver(() => {
+          fillTableToContainer(table);
+        });
+        resizeObserver.observe(table.parentElement);
+        table._resizeObserver = resizeObserver;
+      }
+
+      function fillTableToContainer(table) {
+        if (table.dataset.userResized === "true") return;
+
+        const wrapper = table.parentElement;
+        const containerWidth = wrapper.clientWidth;
+
+        const ths = table.querySelectorAll("thead th");
+        let total = 0;
+        ths.forEach((th) => (total += th.offsetWidth));
+
+        if (containerWidth > total && total > 0) {
+          const ratio = containerWidth / total;
+          let sumAssigned = 0;
+
+          ths.forEach((th, index) => {
+            let newW;
+            if (index === ths.length - 1) {
+              // Cột cuối lấy phần còn lại để lấp hết khoảng trống do làm tròn
+              newW = containerWidth - sumAssigned;
+            } else {
+              newW = Math.round(th.offsetWidth * ratio);
+              sumAssigned += newW;
+            }
+            th.style.width = newW + "px";
+            th.style.minWidth = newW + "px";
+          });
+        }
+
+        updateTableWidth(table);
       }
 
       // Gọi 1 lần khi DOM sẵn sàng
-      initTableResize(document.querySelector("table"));
+      initTableResize(document.getElementById("weekly-plan-table"));
 
       let qrScanner = null;
 
@@ -6541,8 +6734,9 @@
               qrbox: 250,
             },
             (decodedText) => {
-              document.getElementById("fill-form-new-template-equitment-name").value =
-                decodedText.trim();
+              document.getElementById(
+                "fill-form-new-template-equitment-name",
+              ).value = decodedText.trim();
 
               closeQrScanner();
             },
@@ -6577,8 +6771,9 @@
         html5QrCode
           .scanFile(file, false)
           .then((decodedText) => {
-            document.getElementById("fill-form-new-template-equitment-name").value =
-              decodedText.trim();
+            document.getElementById(
+              "fill-form-new-template-equitment-name",
+            ).value = decodedText.trim();
 
             showCustomToast("Đã đọc QR thành công!", "success");
             console.log(decodedText);
