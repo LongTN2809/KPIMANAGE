@@ -3071,11 +3071,7 @@
               </div>
             </td>
             <td data-col="10" class="p-2 text-center">
-              <div class="flex justify-center items-center gap-3">
-                <button onclick="insertRowBelow('${task.id}')" class="text-blue-500 hover:text-blue-700" title="Chèn dòng"><i class="fa-solid fa-plus-circle text-sm"></i></button>
-                <button onclick="deleteTaskRow('${task.id}')" class="text-rose-500 hover:text-rose-700" title="Xóa dòng"><i class="fa-solid fa-trash-can text-sm"></i></button>
-                <button id="hide-task-row-btn" onclick="setVisibleTaskRow('${task.id}')" class="text-black-500" title="Ẩn hiện dòng"><i class="fa-solid fa-eye text-sm"></i></button>
-              </div>
+              ${renderTaskActionButtonsHTML(task)}
             </td>
           `;
           body.appendChild(tr);
@@ -6329,6 +6325,26 @@
       window.resizeSignatureCanvas = resizeSignatureCanvas;
       window.fillTableToContainer = fillTableToContainer;
       window.setVisibleTaskRow = setVisibleTaskRow;
+      window.renderTaskActionButtonsHTML = renderTaskActionButtonsHTML;
+
+      function renderTaskActionButtonsHTML(task) {
+  const isAdmin =
+    state.currentRole === "Admin" || state.currentRole === "Super Admin";
+
+  return `
+    <div class="flex justify-center items-center gap-1.5">
+      <button onclick="insertRowBelow('${task.id}')" class="text-blue-500 hover:text-blue-700" title="Chèn dòng">
+        <i class="fa-solid fa-plus-circle text-sm"></i>
+      </button>
+      <button onclick="setVisibleTaskRow('${task.id}', false)" class="hide-task-row-btn text-amber-500 hover:text-amber-700 ${isAdmin ? "" : "hidden"}" title="Ẩn dòng">
+        <i class="fa-solid fa-eye-slash text-sm"></i>
+      </button>
+      <button onclick="deleteTaskRow('${task.id}')" class="text-rose-500 hover:text-rose-700" title="Xóa dòng">
+        <i class="fa-solid fa-trash-can text-sm"></i>
+      </button>
+    </div>
+  `;
+}
 
       function updateCloudStatus(status, errMessage = "") {
         const loginBadge = document.getElementById("login-cloud-status-badge");
