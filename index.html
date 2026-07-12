@@ -1650,6 +1650,8 @@
               <option value="Technician">Technician</option>
               <option value="Carpenter">Carpenter</option>
               <option value="Admin">Admin</option>
+              <option value="Event">Event</option>
+              <option value="Defect">Defect</option>
             </select>
           </div>
           <div>
@@ -2734,7 +2736,13 @@
         }
 
         // Thứ tự ưu tiên hiển thị của Ca làm: A -> N -> B -> C
-        const shiftOrder = { "Ca A": 0, "Ca N": 1, "Ca B": 2, "Ca C": 3 };
+        const shiftOrder = {
+          "": 0,
+          "Ca A": 1,
+          "Ca N": 2,
+          "Ca B": 3,
+          "Ca C": 4,
+        };
 
         filteredTasks.sort((a, b) => {
           if (typeof a.date === "string" && typeof b.date === "string") {
@@ -2747,9 +2755,14 @@
           filteredTasks,
           [(t) => t.date, (t) => t.shift, (t) => t.group],
           [
-            null, // Ngày: giữ nguyên thứ tự đã sort tăng dần ở trên
-            (a, b) => (shiftOrder[a] ?? 99) - (shiftOrder[b] ?? 99), // Ca làm: ép theo A -> N -> B -> C
-            null, // Nhóm: giữ theo thứ tự xuất hiện đầu tiên như cũ
+            null,
+            (a, b) => {
+              const hasA = Object.prototype.hasOwnProperty.call(shiftOrder, a);
+              const hasB = Object.prototype.hasOwnProperty.call(shiftOrder, b);
+              if (hasA && hasB) return shiftOrder[a] - shiftOrder[b]; // cả 2 đều có ca cụ thể -> sắp theo A->N->B->C
+              return 0; // 1 trong 2 (hoặc cả 2) là "" chưa chọn ca -> giữ nguyên vị trí gốc trong mảng
+            },
+            null,
           ],
         );
         filteredTasks.length = 0;
@@ -2824,13 +2837,24 @@
               month: "2-digit",
             });
 
+            const isAdmin =
+              state.currentRole === "Admin" ||
+              state.currentRole === "Super Admin";
+
+            const hideDayBtnHTML = isAdmin
+              ? `<button onclick="setVisibleDayRows('${task.date}', false)" title="Ẩn cả ngày" class="mt-1.5 w-full flex items-center justify-center gap-1 text-[9px] font-bold text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded px-1 py-1">
+      <i class="fa-solid fa-eye-slash"></i> Ẩn cả ngày
+    </button>`
+              : "";
+
             dayColHTML = `
-              <td data-col="0" class="w-[110px] min-w-[110px] bg-white z-20 text-center border-r border-slate-200 font-extrabold text-slate-700" rowspan="${dateSpans[idx]}">
-                <div class="text-[11px] uppercase mb-1">${labelDay}</div>
-                <div class="text-[12px] text-slate-900 mb-2">${labelDate}</div>
-                <input type="date" class="w-[100px] text-[10px] text-blue-600 bg-white border rounded px-1.5 py-1" value="${task.date}" onchange="updateTaskDateGroup('${task.date}', this.value)" />
-              </td>
-            `;
+  <td data-col="0" class="w-[110px] min-w-[110px] bg-white z-20 text-center border-r border-slate-200 font-extrabold text-slate-700" rowspan="${dateSpans[idx]}">
+    <div class="text-[11px] uppercase mb-1">${labelDay}</div>
+    <div class="text-[12px] text-slate-900 mb-2">${labelDate}</div>
+    <input type="date" class="w-[100px] text-[10px] text-blue-600 bg-white border rounded px-1.5 py-1" value="${task.date}" onchange="updateTaskDateGroup('${task.date}', this.value)" />
+    ${hideDayBtnHTML}
+  </td>
+`;
           }
 
           let groupdBadgeClassShift = "";
@@ -2860,15 +2884,17 @@
           let shiftCellHTML = "";
           if (shiftSpans[idx] > 0) {
             shiftCellHTML = `
-              <td data-col="1" class="w-[90px] min-w-[90px] bg-white z-20 p-2 text-center font-bold border-r" rowspan="${shiftSpans[idx]}">
-                <select onchange="updateTaskField('${task.id}', 'shift', this.value)" class="w-full text-center text-[11px] font-black uppercase tracking-wider px-2 pr-8 py-1.5 rounded-lg transition-all cursor-pointer focus:outline-none ${groupdBadgeClassShift}">
-                  <option value="" ${!task.shift ? "selected" : ""}>Chọn ca</option>
-                  <option value="Ca A" ${task.shift === "Ca A" ? "selected" : ""}>Ca A</option>
-                  <option value="Ca B" ${task.shift === "Ca B" ? "selected" : ""}>Ca B</option>
-                  <option value="Ca C" ${task.shift === "Ca C" ? "selected" : ""}>Ca C</option>
-                  <option value="Ca N" ${task.shift === "Ca N" ? "selected" : ""}>Ca N</option>
-                </select>
-              </td>
+             <td data-col="1" class="w-[90px] min-w-[90px] bg-white z-20 p-2 text-center font-bold border-r align-top" rowspan="${shiftSpans[idx]}">
+  <select onchange="updateTaskField('${task.id}', 'shift', this.value)" class="w-full text-center text-[11px] font-black uppercase tracking-wider px-2 pr-8 py-1.5 rounded-lg transition-all cursor-pointer focus:outline-none ${groupdBadgeClassShift}">
+    <option value="" ${task.shift === "" ? "selected" : ""} >Chọn ca</option>
+    <option value="Ca A" ${task.shift === "Ca A" ? "selected" : ""}>Ca A</option>
+    <option value="Ca B" ${task.shift === "Ca B" ? "selected" : ""}>Ca B</option>
+    <option value="Ca C" ${task.shift === "Ca C" ? "selected" : ""}>Ca C</option>
+    <option value="Ca N" ${task.shift === "Ca N" ? "selected" : ""}>Ca N</option>
+  </select>
+
+  <textarea class="block w-full mt-2 p-1 text-[11px] border border-indigo-600 rounded-md resize-none focus:outline-none" rows="3"></textarea>
+</td>
             `;
           }
 
@@ -3004,8 +3030,6 @@
                   <option value="Vận Hành" ${task.group === "Vận Hành" ? "selected" : ""}>Vận Hành</option>
                   <option value="Bảo Trì" ${task.group === "Bảo Trì" ? "selected" : ""}>Bảo Trì</option>
                   <option value="Carpenter" ${task.group === "Carpenter" ? "selected" : ""}>Carpenter</option>
-                  <option value="Event" ${task.group === "Event" ? "selected" : ""} >Event</option>
-                  <option value="Defect" ${task.group === "Defect" ? "selected" : ""} >Defect</option>
                 </select>
               </td>
             `;
@@ -3086,7 +3110,7 @@
           state.currentRole === "Admin" || state.currentRole === "Super Admin";
 
         if (!isAdmin) {
-          if (panel) panel.classList.add("hidden"); // ẩn cả cái box, giữ nguyên cấu trúc bên trong
+          if (panel) panel.classList.add("hidden");
           return;
         }
 
@@ -3094,6 +3118,7 @@
         if (!container) return;
 
         const hiddenTasks = state.tasks.filter((t) => t.hidden);
+
         const countBadge = document.getElementById("hidden-tasks-count");
         if (countBadge) countBadge.textContent = hiddenTasks.length;
 
@@ -3102,23 +3127,50 @@
           return;
         }
 
-        container.innerHTML = hiddenTasks
-          .map(
-            (task) => `
-    <tr class="border-b border-slate-200 hover:bg-slate-50 text-xs">
-      <td class="p-2 font-bold">${task.date || ""}</td>
-      <td class="p-2">${task.shift || ""}</td>
-      <td class="p-2">${task.group || ""}</td>
-      <td class="p-2">${task.content || "(Không có nội dung)"}</td>
-      <td class="p-2 text-center">
-        <button onclick="setVisibleTaskRow('${task.id}', true)" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-[10px] font-black px-2 py-1 rounded border border-emerald-200">
-          <i class="fa-solid fa-eye"></i> Hiện lại
-        </button>
-      </td>
-    </tr>
-  `,
-          )
-          .join("");
+        // Gom các task ẩn theo ngày để có nút "Hiện lại cả ngày"
+        const groupedByDate = {};
+        hiddenTasks.forEach((task) => {
+          if (!groupedByDate[task.date]) groupedByDate[task.date] = [];
+          groupedByDate[task.date].push(task);
+        });
+
+        let rowsHTML = "";
+        Object.keys(groupedByDate)
+          .sort()
+          .forEach((date) => {
+            const tasksOfDay = groupedByDate[date];
+
+            rowsHTML += `
+        <tr class="bg-slate-50">
+          <td colspan="4" class="p-2 font-black text-slate-700">
+            ${date} <span class="text-slate-400 font-semibold">(${tasksOfDay.length} việc bị ẩn)</span>
+          </td>
+          <td class="p-2 text-center">
+            <button onclick="setVisibleDayRows('${date}', true)" class="bg-blue-100 hover:bg-blue-200 text-blue-800 text-[10px] font-black px-2 py-1 rounded border border-blue-200">
+              <i class="fa-solid fa-eye"></i> Hiện lại cả ngày
+            </button>
+          </td>
+        </tr>
+      `;
+
+            tasksOfDay.forEach((task) => {
+              rowsHTML += `
+          <tr class="border-b border-slate-200 hover:bg-slate-50 text-xs">
+            <td class="p-2 pl-6 text-slate-400">↳</td>
+            <td class="p-2">${task.shift || "(chưa chọn ca)"}</td>
+            <td class="p-2">${task.group || ""}</td>
+            <td class="p-2">${task.content || "(Không có nội dung)"}</td>
+            <td class="p-2 text-center">
+              <button onclick="setVisibleTaskRow('${task.id}', true)" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-[10px] font-black px-2 py-1 rounded border border-emerald-200">
+                <i class="fa-solid fa-eye"></i> Hiện lại
+              </button>
+            </td>
+          </tr>
+        `;
+            });
+          });
+
+        container.innerHTML = rowsHTML;
       }
 
       let freezeColCount = 0; // số cột đang ghim tính từ trái qua (0 = không ghim)
@@ -5048,6 +5100,7 @@
           const old = state.tasks[idx];
           const newT = {
             ...old,
+            shift: "",
             id: "task-" + Date.now(),
             formFilledId: null,
             assignees: [],
@@ -5081,6 +5134,18 @@
 
         // Dùng lại cơ chế lưu sẵn có của bạn cho field khác
         updateTaskField(id, "hidden", task.hidden);
+
+        renderWeeklyPlanTable();
+        renderHiddenTasksTable();
+      }
+      function setVisibleDayRows(date, visible) {
+        const affectedTasks = state.tasks.filter((t) => t.date === date);
+        if (affectedTasks.length === 0) return;
+
+        affectedTasks.forEach((task) => {
+          task.hidden = !visible;
+          updateTaskField(task.id, "hidden", task.hidden);
+        });
 
         renderWeeklyPlanTable();
         renderHiddenTasksTable();
@@ -6339,6 +6404,7 @@
       window.fillTableToContainer = fillTableToContainer;
       window.setVisibleTaskRow = setVisibleTaskRow;
       window.renderTaskActionButtonsHTML = renderTaskActionButtonsHTML;
+      window.setVisibleDayRows = setVisibleDayRows;
 
       function renderTaskActionButtonsHTML(task) {
         const isAdmin =
