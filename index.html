@@ -494,7 +494,8 @@
               >
                 <i class="fa-solid fa-file-excel"></i> Tải Excel Tuần
               </button>
-              <button id="visible-task-row-btn"
+              <button
+                id="visible-task-row-btn"
                 onclick="
                   document
                     .getElementById('hidden-tasks-panel')
@@ -507,8 +508,7 @@
                 <span
                   id="hidden-tasks-count"
                   class="bg-white/20 rounded-full px-2 text-xs"
-                  ></span
-                >
+                ></span>
               </button>
             </div>
           </div>
@@ -3081,11 +3081,19 @@
       }
 
       function renderHiddenTasksTable() {
+        const panel = document.getElementById("hidden-tasks-panel");
+        const isAdmin =
+          state.currentRole === "Admin" || state.currentRole === "Super Admin";
+
+        if (!isAdmin) {
+          if (panel) panel.classList.add("hidden"); // ẩn cả cái box, giữ nguyên cấu trúc bên trong
+          return;
+        }
+
         const container = document.getElementById("hidden-tasks-body");
-        if (!container) return; // panel chưa mở trên DOM thì bỏ qua
+        if (!container) return;
 
         const hiddenTasks = state.tasks.filter((t) => t.hidden);
-
         const countBadge = document.getElementById("hidden-tasks-count");
         if (countBadge) countBadge.textContent = hiddenTasks.length;
 
@@ -3097,18 +3105,18 @@
         container.innerHTML = hiddenTasks
           .map(
             (task) => `
-      <tr class="border-b border-slate-200 hover:bg-slate-50 text-xs">
-        <td class="p-2 font-bold">${task.date || ""}</td>
-        <td class="p-2">${task.shift || ""}</td>
-        <td class="p-2">${task.group || ""}</td>
-        <td class="p-2">${task.content || "(Không có nội dung)"}</td>
-        <td class="p-2 text-center">
-          <button id="show-task-row-btn onclick="setVisibleTaskRow('${task.id}', true)" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-[10px] font-black px-2 py-1 rounded border border-emerald-200">
-            <i class="fa-solid fa-eye"></i> Hiện lại
-          </button>
-        </td>
-      </tr>
-    `,
+    <tr class="border-b border-slate-200 hover:bg-slate-50 text-xs">
+      <td class="p-2 font-bold">${task.date || ""}</td>
+      <td class="p-2">${task.shift || ""}</td>
+      <td class="p-2">${task.group || ""}</td>
+      <td class="p-2">${task.content || "(Không có nội dung)"}</td>
+      <td class="p-2 text-center">
+        <button onclick="setVisibleTaskRow('${task.id}', true)" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-[10px] font-black px-2 py-1 rounded border border-emerald-200">
+          <i class="fa-solid fa-eye"></i> Hiện lại
+        </button>
+      </td>
+    </tr>
+  `,
           )
           .join("");
       }
@@ -4569,13 +4577,18 @@
       }
 
       function setupRoleUI(role) {
+        state.currentRole = role;
         const adminConfigBtn = document.getElementById("tab-btn-admin-config");
         const createNextWeekBtn = document.getElementById("add-week-btn");
         const createBacklogBtn = document.getElementById("add-backlog-btn");
-        const formsTabBtn = document.getElementById("tab-btn-maintenance-forms",);
+        const formsTabBtn = document.getElementById(
+          "tab-btn-maintenance-forms",
+        );
         const kpiTabBtn = document.getElementById("tab-btn-kpi-dashboard");
         const adminBell = document.getElementById("admin-bell-wrapper");
-        const visibleTaskRowBtn = document.getElementById("visible-task-row-btn");
+        const visibleTaskRowBtn = document.getElementById(
+          "visible-task-row-btn",
+        );
         const hideTaskRowBtn = document.getElementById("hide-task-row-btn");
         const showKpiForStaff =
           state.settings && state.settings.visibleTabs
@@ -4592,16 +4605,16 @@
           if (createBacklogBtn) createBacklogBtn.classList.remove("hidden");
           if (formsTabBtn) formsTabBtn.classList.remove("hidden");
           if (kpiTabBtn) kpiTabBtn.classList.remove("hidden");
-          if(adminBell) adminBell.classList.remove("hidden");
-          if(visibleTaskRowBtn) visibleTaskRowBtn.classList.remove("hidden");
-          if(hideTaskRowBtn) hideTaskRowBtn.classList.remove("hidden");
+          if (adminBell) adminBell.classList.remove("hidden");
+          if (visibleTaskRowBtn) visibleTaskRowBtn.classList.remove("hidden");
+          if (hideTaskRowBtn) hideTaskRowBtn.classList.remove("hidden");
         } else {
           if (adminConfigBtn) adminConfigBtn.classList.add("hidden");
           if (createNextWeekBtn) createNextWeekBtn.classList.add("hidden");
           if (createBacklogBtn) createBacklogBtn.classList.add("hidden");
-          if(adminBell) adminBell.classList.add("hidden");
-          if(visibleTaskRowBtn) visibleTaskRowBtn.classList.add("hidden");
-          if(hideTaskRowBtn) hideTaskRowBtn.classList.add("hidden");
+          if (adminBell) adminBell.classList.add("hidden");
+          if (visibleTaskRowBtn) visibleTaskRowBtn.classList.add("hidden");
+          if (hideTaskRowBtn) hideTaskRowBtn.classList.add("hidden");
 
           // Ẩn/Hiện Tab động theo cài đặt của Admin đối với tài khoản Nhân viên
           if (showFormsForStaff) {
@@ -6328,11 +6341,11 @@
       window.renderTaskActionButtonsHTML = renderTaskActionButtonsHTML;
 
       function renderTaskActionButtonsHTML(task) {
-  const isAdmin =
-    state.currentRole === "Admin" || state.currentRole === "Super Admin";
-
-  return `
-    <div class="flex justify-center items-center gap-1.5">
+        const isAdmin =
+          state.currentRole === "Admin" || state.currentRole === "Super Admin";
+        console.log(isAdmin);
+        return `
+    <div class="flex justify-center items-center gap-3">
       <button onclick="insertRowBelow('${task.id}')" class="text-blue-500 hover:text-blue-700" title="Chèn dòng">
         <i class="fa-solid fa-plus-circle text-sm"></i>
       </button>
@@ -6344,7 +6357,7 @@
       </button>
     </div>
   `;
-}
+      }
 
       function updateCloudStatus(status, errMessage = "") {
         const loginBadge = document.getElementById("login-cloud-status-badge");
