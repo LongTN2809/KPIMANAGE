@@ -2676,6 +2676,37 @@
         });
       }
 
+      function removeVietnameseTones(str) {
+        return str
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/đ/g, "d")
+          .replace(/Đ/g, "D")
+          .toLowerCase()
+          .trim();
+      }
+
+            function filterAssigneeList(taskId, keyword) {
+        const container = document.getElementById(`assignee-list-${taskId}`);
+        const noResultEl = document.getElementById(`assignee-noresult-${taskId}`);
+        if (!container) return;
+      
+        const normalizedKeyword = removeVietnameseTones(keyword);
+        const items = container.querySelectorAll(".assignee-item");
+        let visibleCount = 0;
+      
+        items.forEach((item) => {
+          const name = item.dataset.name || "";
+          const match = name.includes(normalizedKeyword);
+          item.style.display = match ? "" : "none";
+          if (match) visibleCount++;
+        });
+      
+        if (noResultEl) {
+          noResultEl.classList.toggle("hidden", visibleCount > 0);
+        }
+      }
+
       function renderWeeklyPlanTable() {
         const body = document.getElementById("weekly-plan-table-body");
         if (!body) return;
@@ -2978,11 +3009,12 @@
 
           let assigneesDisplay = "";
           state.members
-            .filter((m) => m.role !== "Admin")
+            .filter((m) => m.role !== "Admin" && m.role !== "Super Admin")
             .forEach((m) => {
               const has = task.assignees && task.assignees.includes(m.fullname);
+              const normalizedName = removeVietnameseTones(m.fullname);
               assigneesDisplay += `
-              <label class="flex items-center gap-1.5 px-2 py-1 hover:bg-slate-100 cursor-pointer text-xs font-bold text-slate-700">
+              <label class="assignee-item flex items-center gap-1.5 px-2 py-1 hover:bg-slate-100 cursor-pointer text-xs font-bold text-slate-700" data-name="${normalizedName}">
                 <input type="checkbox" ${has ? "checked" : ""} onchange="updateTaskAssignee('${task.id}', '${m.fullname}', this.checked)" class="rounded text-blue-600 w-4 h-4">
                 <span>${m.fullname}</span>
               </label>
@@ -3066,7 +3098,15 @@
                 </button>
                 <div id="assignee-dropdown-${task.id}" class="hidden absolute top-full left-0 z-30 bg-white border border-slate-200 shadow-xl rounded-xl p-2 w-52 mt-1 flex flex-col gap-1">
                   <div class="text-[9px] font-bold text-slate-400 uppercase border-b pb-1">Phân công nhân sự</div>
-                  <div class="max-h-40 overflow-y-auto">${assigneesDisplay}</div>
+                  <input
+                    type="text"
+                    placeholder="Tìm tên nhân viên..."
+                    oninput="filterAssigneeList('${task.id}', this.value)"
+                    onclick="event.stopPropagation()"
+                    class="w-full text-[10px] font-semibold border rounded-lg px-2 py-1 outline-none focus:border-blue-400"
+                  />
+                  <div id="assignee-noresult-${task.id}" class="hidden text-[10px] text-slate-400 italic text-center py-2">Không tìm thấy nhân viên</div>
+                  <div id="assignee-list-${task.id}" class="max-h-40 overflow-y-auto">${assigneesDisplay}</div>
                   <button onclick="event.stopPropagation(); document.getElementById('assignee-dropdown-${task.id}').classList.add('hidden'); renderWeeklyPlanTable();" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[9px] py-1 rounded text-center mt-1">Xác nhận</button>
                 </div>
               </div>
