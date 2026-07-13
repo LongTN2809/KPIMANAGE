@@ -2865,15 +2865,15 @@
               break;
             case "Ca B":
               groupdBadgeClassShift =
-                "bg-purple-100 text-purple-700 border border-purple-300";
+                "bg-amber-50 text-amber-700 border border-amber-300";
               break;
             case "Ca C":
               groupdBadgeClassShift =
-                "bg-blue-100 text-blue-700 border border-blue-300";
+                "bg-emerald-50 text-emerald-700 border border-emerald-300";
               break;
             case "Ca N":
               groupdBadgeClassShift =
-                "bg-amber-100 text-amber-700 border border-amber-300";
+                "bg-violet-50 text-violet-700 border border-violet-300";
               break;
             default:
               groupdBadgeClassShift =
@@ -5100,15 +5100,21 @@
         const idx = state.tasks.findIndex((x) => x.id === id);
         if (idx !== -1) {
           const old = state.tasks[idx];
+          console.log(old);
           const newT = {
             ...old,
             id: "task-" + Date.now(),
-            formFilledId: null,
+            area: "",
             assignees: [],
-            progress: "",
+            content: "",
+            formFilledId : null,
+            formTemplateId: "",
             note: "",
-            sheetLinks: [],
-          };
+            photos: [],
+            progress: "",
+            selectedSystem: "",
+            sheetLinks: []
+            };
           state.tasks.splice(idx + 1, 0, newT);
           saveState();
           renderWeeklyPlanTable();
