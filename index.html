@@ -6725,7 +6725,7 @@
           }
 
           function moveColResize(clientX) {
-            const nw = Math.max(150, startW + clientX - startX);
+            const nw = Math.max(0, startW + clientX - startX);
             th.style.width = nw + "px";
             th.style.minWidth = nw + "px";
             updateTableWidth(table);
@@ -6816,7 +6816,7 @@
           }
 
           function moveRowResize(clientY) {
-            const nh = Math.max(28, startH + clientY - startY);
+            const nh = Math.max(0, startH + clientY - startY);
             tr.style.height = nh + "px";
             // Cho phép textarea bên trong co giãn theo
             tr.querySelectorAll("textarea").forEach((ta) => {
