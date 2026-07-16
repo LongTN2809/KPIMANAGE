@@ -6708,29 +6708,41 @@
           resizer.className = "col-resizer";
           resizer.style.cssText = `
       position:absolute; right:0; top:0;
-      width:5px; height:100%;
+      width:14px; height:100%;
       cursor:col-resize; z-index:2;
       background:transparent;
+      touch-action:none;
     `;
           th.appendChild(resizer);
 
           let startX, startW;
 
-          resizer.addEventListener("mousedown", (e) => {
-            e.preventDefault();
+          function startColResize(clientX) {
             table.dataset.userResized = "true";
-            startX = e.clientX;
+            startX = clientX;
             startW = th.offsetWidth;
             resizer.style.background = "#3b82f6";
+          }
 
-            const onMove = (e2) => {
-              const nw = Math.max(150, startW + e2.clientX - startX);
-              th.style.width = nw + "px";
-              th.style.minWidth = nw + "px";
-              updateTableWidth(table);
-            };
+          function moveColResize(clientX) {
+            const nw = Math.max(150, startW + clientX - startX);
+            th.style.width = nw + "px";
+            th.style.minWidth = nw + "px";
+            updateTableWidth(table);
+          }
+
+          function endColResize() {
+            resizer.style.background = "transparent";
+          }
+
+          // ── Chuột ──
+          resizer.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            startColResize(e.clientX);
+
+            const onMove = (e2) => moveColResize(e2.clientX);
             const onUp = () => {
-              resizer.style.background = "transparent";
+              endColResize();
               document.removeEventListener("mousemove", onMove);
               document.removeEventListener("mouseup", onUp);
             };
@@ -6738,29 +6750,32 @@
             document.addEventListener("mouseup", onUp);
           });
 
+          // ── Cảm ứng (điện thoại/tablet) ──
           resizer.addEventListener(
-              "touchstart",
-              (e) => {
-                e.preventDefault();
-                const touch = e.touches[0];
-                startColResize(touch.clientX);
-          
-                const onMove = (e2) => {
-                  e2.preventDefault();
-                  moveColResize(e2.touches[0].clientX);
-                };
-                const onEnd = () => {
-                  endColResize();
-                  document.removeEventListener("touchmove", onMove);
-                  document.removeEventListener("touchend", onEnd);
-                  document.removeEventListener("touchcancel", onEnd);
-                };
-                document.addEventListener("touchmove", onMove, { passive: false });
-                document.addEventListener("touchend", onEnd);
-                document.addEventListener("touchcancel", onEnd);
-              },
-              { passive: false }
-            );
+            "touchstart",
+            (e) => {
+              e.preventDefault();
+              const touch = e.touches[0];
+              startColResize(touch.clientX);
+
+              const onMove = (e2) => {
+                e2.preventDefault();
+                moveColResize(e2.touches[0].clientX);
+              };
+              const onEnd = () => {
+                endColResize();
+                document.removeEventListener("touchmove", onMove);
+                document.removeEventListener("touchend", onEnd);
+                document.removeEventListener("touchcancel", onEnd);
+              };
+              document.addEventListener("touchmove", onMove, {
+                passive: false,
+              });
+              document.addEventListener("touchend", onEnd);
+              document.addEventListener("touchcancel", onEnd);
+            },
+            { passive: false },
+          );
 
           resizer.addEventListener(
             "mouseenter",
@@ -6782,9 +6797,10 @@
           resizer.className = "row-resizer";
           resizer.style.cssText = `
       position:absolute; left:0; bottom:0;
-      width:100%; height:5px;
+      width:100%; height:14px;
       cursor:row-resize; z-index:2;
       background:transparent;
+      touch-action:none;
     `;
 
           // tr cần position relative
@@ -6793,22 +6809,33 @@
 
           let startY, startH;
 
-          resizer.addEventListener("mousedown", (e) => {
-            e.preventDefault();
-            startY = e.clientY;
+          function startRowResize(clientY) {
+            startY = clientY;
             startH = tr.offsetHeight;
             resizer.style.background = "#3b82f6";
+          }
 
-            const onMove = (e2) => {
-              const nh = Math.max(28, startH + e2.clientY - startY);
-              tr.style.height = nh + "px";
-              // Cho phép textarea bên trong co giãn theo
-              tr.querySelectorAll("textarea").forEach((ta) => {
-                ta.style.height = "auto";
-              });
-            };
+          function moveRowResize(clientY) {
+            const nh = Math.max(28, startH + clientY - startY);
+            tr.style.height = nh + "px";
+            // Cho phép textarea bên trong co giãn theo
+            tr.querySelectorAll("textarea").forEach((ta) => {
+              ta.style.height = "auto";
+            });
+          }
+
+          function endRowResize() {
+            resizer.style.background = "transparent";
+          }
+
+          // ── Chuột ──
+          resizer.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            startRowResize(e.clientY);
+
+            const onMove = (e2) => moveRowResize(e2.clientY);
             const onUp = () => {
-              resizer.style.background = "transparent";
+              endRowResize();
               document.removeEventListener("mousemove", onMove);
               document.removeEventListener("mouseup", onUp);
             };
@@ -6816,14 +6843,14 @@
             document.addEventListener("mouseup", onUp);
           });
 
-          // Cảm ứng
+          // ── Cảm ứng (điện thoại/tablet) ──
           resizer.addEventListener(
             "touchstart",
             (e) => {
               e.preventDefault();
               const touch = e.touches[0];
               startRowResize(touch.clientY);
-        
+
               const onMove = (e2) => {
                 e2.preventDefault();
                 moveRowResize(e2.touches[0].clientY);
@@ -6834,11 +6861,13 @@
                 document.removeEventListener("touchend", onEnd);
                 document.removeEventListener("touchcancel", onEnd);
               };
-              document.addEventListener("touchmove", onMove, { passive: false });
+              document.addEventListener("touchmove", onMove, {
+                passive: false,
+              });
               document.addEventListener("touchend", onEnd);
               document.addEventListener("touchcancel", onEnd);
             },
-            { passive: false }
+            { passive: false },
           );
 
           resizer.addEventListener(
