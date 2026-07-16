@@ -6739,6 +6739,30 @@
           });
 
           resizer.addEventListener(
+              "touchstart",
+              (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                startColResize(touch.clientX);
+          
+                const onMove = (e2) => {
+                  e2.preventDefault();
+                  moveColResize(e2.touches[0].clientX);
+                };
+                const onEnd = () => {
+                  endColResize();
+                  document.removeEventListener("touchmove", onMove);
+                  document.removeEventListener("touchend", onEnd);
+                  document.removeEventListener("touchcancel", onEnd);
+                };
+                document.addEventListener("touchmove", onMove, { passive: false });
+                document.addEventListener("touchend", onEnd);
+                document.addEventListener("touchcancel", onEnd);
+              },
+              { passive: false }
+            );
+
+          resizer.addEventListener(
             "mouseenter",
             () => (resizer.style.background = "#94a3b8"),
           );
@@ -6791,6 +6815,31 @@
             document.addEventListener("mousemove", onMove);
             document.addEventListener("mouseup", onUp);
           });
+
+          // Cảm ứng
+          resizer.addEventListener(
+            "touchstart",
+            (e) => {
+              e.preventDefault();
+              const touch = e.touches[0];
+              startRowResize(touch.clientY);
+        
+              const onMove = (e2) => {
+                e2.preventDefault();
+                moveRowResize(e2.touches[0].clientY);
+              };
+              const onEnd = () => {
+                endRowResize();
+                document.removeEventListener("touchmove", onMove);
+                document.removeEventListener("touchend", onEnd);
+                document.removeEventListener("touchcancel", onEnd);
+              };
+              document.addEventListener("touchmove", onMove, { passive: false });
+              document.addEventListener("touchend", onEnd);
+              document.addEventListener("touchcancel", onEnd);
+            },
+            { passive: false }
+          );
 
           resizer.addEventListener(
             "mouseenter",
