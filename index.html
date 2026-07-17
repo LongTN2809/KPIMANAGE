@@ -2719,6 +2719,13 @@
             t.progress !== "Làm lại" &&
             !t.hidden,
         );
+
+        filteredTasks.forEach((task) => {
+          if (!task.hasOwnProperty("assign_task")) {
+            task["assign_task"] = "";
+          }
+        });
+        
         if (filteredTasks.length === 0) {
           const weekFilter = document.getElementById("week-filter");
           const hasOnlyPlaceholderWeekOption =
@@ -2923,7 +2930,7 @@
     <option value="Ca N" ${task.shift === "Ca N" ? "selected" : ""}>Ca N</option>
   </select>
 
-  <textarea onchange="updateTaskField('${task.id}', 'area', this.value)" class="block w-full mt-2 p-1 text-[11px] border border-indigo-600 rounded-md resize-none focus:outline-none" rows="3">${task.area || ""}</textarea>
+  <textarea onchange="updateTaskField('${task.id}', 'assign_task', this.value)" class="block w-full mt-2 p-1 text-[11px] border border-indigo-600 rounded-md resize-none focus:outline-none" rows="3">${task.assign_task || ""}</textarea>
 </td>
             `;
           }
@@ -4803,7 +4810,6 @@
 
       function addNewWeeklyTaskRow() {
         const todayStr = new Date().toISOString().slice(0, 10);
-        console.log(todayStr);
         const newT = {
           id: "task-" + Date.now(),
           weekNum: activeWeekFilterVal,
