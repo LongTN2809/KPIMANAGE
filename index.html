@@ -2923,7 +2923,7 @@
     <option value="Ca N" ${task.shift === "Ca N" ? "selected" : ""}>Ca N</option>
   </select>
 
-  <textarea class="block w-full mt-2 p-1 text-[11px] border border-indigo-600 rounded-md resize-none focus:outline-none" rows="3"></textarea>
+  <textarea onchange="updateTaskField('${task.id}', 'area', this.value)" class="block w-full mt-2 p-1 text-[11px] border border-indigo-600 rounded-md resize-none focus:outline-none" rows="3"></textarea>
 </td>
             `;
           }
