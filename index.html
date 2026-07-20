@@ -2515,7 +2515,22 @@
         refreshUI();
       }
 
+      // ====== CỜ CHỐNG ECHO (chặn render đè khi Firestore bắn lại dữ liệu mình vừa ghi) ======
+      let isLocalWriting = false;
+      let localWriteTimeout = null;
+
+      function markLocalWrite() {
+        isLocalWriting = true;
+        clearTimeout(localWriteTimeout);
+        localWriteTimeout = setTimeout(() => {
+          isLocalWriting = false;
+        }, 2500); // đợi Firestore echo về xong mới mở khoá lại
+      }
+
+      // ====== SAVE STATE ======
       async function saveState() {
+        markLocalWrite(); // đặt cờ TRƯỚC khi ghi lên cloud
+
         const stateToPersist = { ...state, currentUser: null };
         localStorage.setItem(
           "kpi_app_state_v28",
@@ -2542,6 +2557,7 @@
         }
       }
 
+      // ====== LISTEN REALTIME STATE ======
       function listenRealtimeState() {
         if (!isCloudActive) return;
 
@@ -2551,7 +2567,6 @@
             if (!doc.exists) return;
 
             const data = doc.data();
-
             console.log("🔥 Cloud changed", data);
 
             state.members = data.members || [];
@@ -2563,6 +2578,10 @@
             state.weeks = data.weeks || [];
             state.adminNotifications = data.adminNotifications || [];
             state.settings = data.settings || {};
+
+            if (isLocalWriting) {
+              return;
+            }
 
             renderWeeklyPlanTable();
             renderBacklogsTable();
@@ -5714,6 +5733,15 @@
         createFolder(state.currentFolder);
       }
 
+      function escapeHTML(str) {
+        return String(str ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+
       function renderBacklogsTable() {
         const body = document.getElementById("backlogs-table-body");
         if (!body) return;
@@ -5728,12 +5756,30 @@
           const tr = document.createElement("tr");
           tr.className = "border-b text-xs hover:bg-slate-50 transition";
 
-          let photosHTML = "";
+          // ===== Cột ảnh: có sẵn ảnh + nút xoá "x" + nút tải thêm =====
+          let photosHTML = `<div class="flex flex-wrap justify-center gap-1.5">`;
           if (item.photos && item.photos.length > 0) {
-            item.photos.forEach((p) => {
-              photosHTML += `<img src="${p}"  class="w-8 h-8 rounded border object-cover">`;
+            item.photos.forEach((p, idx) => {
+              photosHTML += `
+          <div class="relative group w-8 h-8 shrink-0">
+            <img src="${p}" class="w-8 h-8 rounded border object-cover">
+            <button type="button"
+                    onclick="deleteBacklogPhoto('${item.id}', ${idx})"
+                    class="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-rose-600 text-white text-[9px] leading-none flex items-center justify-center shadow
+                           opacity-100 md:opacity-0 md:group-hover:opacity-100 transition">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        `;
             });
           }
+          photosHTML += `
+        <label class="w-8 h-8 shrink-0 rounded border border-dashed border-slate-300 flex items-center justify-center cursor-pointer text-slate-400 hover:text-indigo-600 hover:border-indigo-400 transition">
+          <i class="fa-solid fa-plus text-[10px]"></i>
+          <input type="file" accept="image/*" multiple class="hidden" onchange="handleBacklogPhotoUpload('${item.id}', this.files)">
+        </label>
+      </div>
+    `;
 
           const shifts = ["Ca A", "Ca B", "Ca C"];
           let assignOptions = `<div id="radio-group-${item.id}" class="flex flex-col gap-1 max-h-24 overflow-y-auto">`;
@@ -5741,57 +5787,124 @@
             const isChecked =
               item.reAssignees && item.reAssignees.includes(shift);
             assignOptions += `
-    <label class="flex items-center gap-1.5 py-0.5 cursor-pointer text-[11px] font-bold">
-        <input type="radio" 
-               name="backlog-shift-${item.id}" 
-               ${isChecked ? "checked" : ""} 
-               onclick="updateBacklogAssignee('${item.id}', '${shift}')" 
-               class="rounded-full text-blue-600">
-        <span>${shift}</span>
-    </label>
-`;
+        <label class="flex items-center gap-1.5 py-0.5 cursor-pointer text-[11px] font-bold">
+            <input type="radio" 
+                  name="backlog-shift-${item.id}" 
+                  ${isChecked ? "checked" : ""} 
+                  onclick="updateBacklogAssignee('${item.id}', '${shift}')" 
+                  class="rounded-full text-blue-600">
+            <span>${shift}</span>
+        </label>
+      `;
           });
           assignOptions += `</div>`;
 
           tr.innerHTML = `
-            <td class="p-3 text-center font-bold text-slate-500">${item.date}</td>
-            <td class="p-3 font-semibold text-slate-700">${item.group}</td>
-            <td class="p-3 font-semibold">${item.area || ""}</td>
-            <td class="p-3 font-bold">${item.content}</td>
-            <td class="p-3 text-center">
-              <div class="flex flex-wrap justify-center gap-1">${photosHTML}</div>
-            </td>
-            <td class="p-3 font-semibold text-slate-600">${item.oldAssignees ? item.oldAssignees.join(", ") : ""}</td>
-            <td class="p-3 text-center">
-              <span class="bg-rose-100 text-rose-800 font-bold px-2 py-0.5 rounded-full text-[10px]">${item.oldProgress}</span>
-            </td>
-            <td class="p-3 bg-indigo-50/50">
-              <div class="flex flex-col gap-1.5">
-                <label class="text-[9px] font-bold text-slate-500 uppercase font-sans">Chọn Ngày Phân Lại:</label>
-                <input type="date" value="${item.reDate || ""}" onchange="updateBacklogField('${item.id}', 'reDate', this.value)" class="p-1 border rounded bg-white text-[11px] font-bold text-slate-700">
-                
-                <label class="text-[9px] font-bold text-slate-500 uppercase font-sans">Chọn Ca Thực Hiện:</label>
-                <div class="bg-white p-1 rounded border">
-                  ${assignOptions}
-                </div>
+      <td class="p-3 text-center font-bold text-slate-500">
+  <input type="date" value="${item.date || ""}" 
+         onchange="updateBacklogField('${item.id}', 'date', this.value)" 
+         class="p-1 border rounded bg-white text-[11px] font-bold text-slate-500 w-full">
+</td>
+<td class="p-3 font-semibold text-slate-700">
+  <select onchange="updateBacklogField('${item.id}', 'group', this.value)" 
+          class="p-1 border rounded bg-white text-[11px] font-semibold text-slate-700 w-full">
+    <option value="Vận Hành" ${item.group === "Vận Hành" ? "selected" : ""}>Vận Hành</option>
+    <option value="Bảo Trì" ${item.group === "Bảo Trì" ? "selected" : ""}>Bảo Trì</option>
+    <option value="Carpenter" ${item.group === "Carpenter" ? "selected" : ""}>Carpenter</option>
+  </select>
+</td>
+      <td class="p-3 font-semibold">
+        <input type="text" value="${escapeHTML(item.area)}" 
+               onchange="updateBacklogField('${item.id}', 'area', this.value)" 
+               class="bg-transparent w-full outline-none font-semibold text-[11px] border-b border-transparent focus:border-slate-300">
+      </td>
+      <td class="p-3 font-bold">
+        <textarea onchange="updateBacklogField('${item.id}', 'content', this.value)" 
+                  class="bg-transparent w-full outline-none font-bold text-[11px] resize-none" 
+                  rows="2">${escapeHTML(item.content)}</textarea>
+      </td>
+      <td class="p-3 text-center">
+        ${photosHTML}
+      </td>
+      <td class="p-3 font-semibold text-slate-600">
+        <textarea onchange="updateBacklogOldAssignees('${item.id}', this.value)" 
+                  class="bg-transparent w-full outline-none font-semibold text-[11px] resize-none" 
+                  rows="2">${escapeHTML(item.oldAssignees ? item.oldAssignees.join(", ") : "")}</textarea>
+      </td>
+      <td class="p-3 text-center">
+        <span class="bg-rose-100 text-rose-800 font-bold px-2 py-0.5 rounded-full text-[10px]">${item.oldProgress}</span>
+      </td>
+      <td class="p-3 bg-indigo-50/50">
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[9px] font-bold text-slate-500 uppercase font-sans">Chọn Ngày Phân Lại:</label>
+          <input type="date" value="${item.reDate || ""}" onchange="updateBacklogField('${item.id}', 'reDate', this.value)" class="p-1 border rounded bg-white text-[11px] font-bold text-slate-700">
+          
+          <label class="text-[9px] font-bold text-slate-500 uppercase font-sans">Chọn Ca Thực Hiện:</label>
+          <div class="bg-white p-1 rounded border">
+            ${assignOptions}
+          </div>
 
-                <button onclick="commitRedistributeDate('${item.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] py-1.5 rounded shadow mt-1">
-                  <i class="fa-solid fa-paper-plane"></i> Giao lại Weekly Plan
-                </button>
-              </div>
-            </td>
-            <td class="p-3">
-              <textarea onchange="updateBacklogField('${item.id}', 'note', this.value)" class="bg-transparent w-full text-[11px] outline-none font-bold" rows="3">${item.note || ""}</textarea>
-            </td>
-            <td class="p-3 text-center">
-              <button onclick="deleteBacklogRow('${item.id}')" class="text-rose-500 hover:text-rose-700 text-sm">
-                <i class="fa-solid fa-trash-can"></i>
-              </button>
-            </td>
-            
-          `;
+          <button onclick="commitRedistributeDate('${item.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] py-1.5 rounded shadow mt-1">
+            <i class="fa-solid fa-paper-plane"></i> Giao lại Weekly Plan
+          </button>
+        </div>
+      </td>
+      <td class="p-3">
+        <textarea onchange="updateBacklogField('${item.id}', 'note', this.value)" class="bg-transparent w-full text-[11px] outline-none font-bold resize-none" rows="3">${escapeHTML(item.note)}</textarea>
+      </td>
+      <td class="p-3 text-center">
+        <button onclick="deleteBacklogRow('${item.id}')" class="text-rose-500 hover:text-rose-700 text-sm">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+      </td>
+    `;
           body.appendChild(tr);
         });
+      }
+
+      // Tải ảnh lên -> convert base64 -> đẩy vào item.photos
+      function handleBacklogPhotoUpload(id, fileList) {
+        const item = state.backlogs.find((b) => String(b.id) === String(id));
+        if (!item || !fileList || fileList.length === 0) return;
+
+        if (!item.photos) item.photos = [];
+
+        const files = Array.from(fileList);
+        let loadedCount = 0;
+
+        files.forEach((file) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            item.photos.push(e.target.result);
+            loadedCount++;
+            if (loadedCount === files.length) {
+              saveState();
+              renderBacklogsTable(); // cần render lại để hiện ảnh mới thêm
+            }
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      // Xoá 1 ảnh theo index
+      function deleteBacklogPhoto(id, index) {
+        const item = state.backlogs.find((b) => String(b.id) === String(id));
+        if (!item || !item.photos) return;
+        item.photos.splice(index, 1);
+        saveState();
+        renderBacklogsTable(); // cần render lại vì đã xoá 1 phần tử ảnh
+      }
+
+      // Cập nhật người thực hiện cũ (chuỗi cách nhau bởi dấu phẩy -> mảng)
+      function updateBacklogOldAssignees(id, value) {
+        const item = state.backlogs.find((b) => String(b.id) === String(id));
+        if (!item) return;
+        item.oldAssignees = value
+          .split(",")
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0);
+        saveState();
+        // KHÔNG render lại để tránh mất focus textarea
       }
 
       function buildBackLogs() {
