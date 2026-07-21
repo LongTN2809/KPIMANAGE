@@ -3500,9 +3500,9 @@
 
         const list = evaluateKPIStats();
 
-        const dutyGroup = list.filter((m) => m.title === "Duty Engineer");
-        const techGroup = list.filter((m) => m.title === "Technician");
-        const carpGroup = list.filter((m) => m.title === "Carpenter");
+        const dutyGroup = list.filter((m) => m.title === "Duty Engineer" && m.role !== 'Super Admin' && m.role !== 'Admin');
+        const techGroup = list.filter((m) => m.title === "Technician" && m.role !== 'Super Admin' && m.role !== 'Admin');
+        const carpGroup = list.filter((m) => m.title === "Carpenter" && m.role !== 'Super Admin' && m.role !== 'Admin');
 
         const findBest = (grp) => {
           if (grp.length === 0)
@@ -3541,9 +3541,9 @@
       }
 
       function initKPICharts(list) {
-        const dutyMembers = list.filter((m) => m.title === "Duty Engineer");
-        const techMembers = list.filter((m) => m.title === "Technician");
-        const carpMembers = list.filter((m) => m.title === "Carpenter");
+        const dutyMembers = list.filter((m) => m.title === "Duty Engineer" && m.role !== 'Super Admin' && m.role !== 'Admin');
+        const techMembers = list.filter((m) => m.title === "Technician" && m.role !== 'Super Admin' && m.role !== 'Admin');
+        const carpMembers = list.filter((m) => m.title === "Carpenter" && m.role !== 'Super Admin' && m.role !== 'Admin');
 
         const buildChartConfig = (members) => {
           const sorted = [...members].sort(
