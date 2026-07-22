@@ -3647,7 +3647,7 @@
         const isAdmin = state.currentUser && state.currentUser.role === "Admin";
 
         list.forEach((item) => {
-          if(item.role === 'Super Admin' || item.role === 'Admin') continue;
+          if(item.role === 'Super Admin' || item.role === 'Admin') return;
           let target =
               item.title === "Duty Engineer"
               ? dutyTable
