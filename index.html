@@ -2231,23 +2231,11 @@
       };
 
       const appId = "default-app-id";
-let db = null;
-let isCloudActive = false;
-let freezeCol = 0;
-let freezeLayerResizeObserver = null;
-let freezeLayerScrollSync = null;
-
-// Cờ kiểm soát chống lặp Echo khi ứng dụng tự thực hiện lệnh ghi
-let isLocalWriting = false;
-let localWriteTimeout = null;
-
-function markLocalWrite() {
-  isLocalWriting = true;
-  clearTimeout(localWriteTimeout);
-  localWriteTimeout = setTimeout(() => {
-    isLocalWriting = false;
-  }, 2500); // Khóa phản hồi Snapshot từ Đám mây trong 2.5 giây khi đang ghi
-}
+      let db = null;
+      let isCloudActive = false;
+      let freezeCol = 0;
+      let freezeLayerResizeObserver = null;
+      let freezeLayerScrollSync = null;
 
       function getFreezeContext() {
         const table = document.getElementById("weekly-plan-table");
@@ -2411,99 +2399,81 @@ function markLocalWrite() {
       let carpenterChartInstance = null;
 
       async function initFirebase() {
-  try {
-    if (typeof firebase !== "undefined") {
-      firebase.initializeApp(firebaseConfig);
-      db = firebase.firestore();
-      isCloudActive = true;
-
-      // Bật tính năng offline persistence của Firestore để làm việc mượt mà khi mạng yếu
-      db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
-        console.warn("Cảnh báo Offline Persistence:", err.message);
-      });
-
-      // Chỉ sử dụng MỘT Listener duy nhất để tránh Race Condition
-      setupRealtimeSync();
-    } else {
-      console.warn("Không tìm thấy Firebase SDK. Chuyển sang chế độ Local Fallback.");
-      loadLocalFallback();
-    }
-  } catch (e) {
-    console.error("Lỗi khởi tạo Firebase:", e);
-    updateCloudStatus("error", e.message);
-    loadLocalFallback();
-  }
-}
+        try {
+          if (typeof firebase !== "undefined") {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            isCloudActive = true;
+            setupRealtimeSync();
+            listenRealtimeState();
+          } else {
+            console.warn(
+              "Firebase SDK was not loaded. Fallback to local storage.",
+            );
+            loadLocalFallback();
+          }
+        } catch (e) {
+          console.error("Firebase connection error: ", e);
+          updateCloudStatus("error", e.message);
+          alert("Firebase error: " + e.message); // tạm thời để debug trên mobile
+          loadLocalFallback();
+        }
+      }
 
       function setupRealtimeSync() {
-  if (!db) return;
-  const stateDocRef = db.collection("system_kpi_v28").doc("data_state");
+        const stateDocRef = db.collection("system_kpi_v28").doc("data_state");
 
-  stateDocRef.onSnapshot(
-    (docSnap) => {
-      // Nếu thiết bị này đang ghi dữ liệu, bỏ qua snapshot dội ngược để tránh giật lag
-      if (isLocalWriting) {
-        console.log("⚡ Bỏ qua snapshot do ứng dụng đang thực hiện lệnh ghi cục bộ.");
-        return;
+        stateDocRef.onSnapshot(
+          (docSnap) => {
+            if (docSnap.exists) {
+              const cloudData = docSnap.data();
+              if (
+                cloudData &&
+                cloudData.members &&
+                cloudData.members.length > 0
+              ) {
+                state.members = cloudData.members || [];
+                state.tasks = cloudData.tasks || [];
+                state.backlogs = cloudData.backlogs || [];
+                state.templates = cloudData.templates || [];
+                state.folders = cloudData.folders || [];
+                state.auditLogs = cloudData.auditLogs || [];
+                state.weeks = cloudData.weeks || [];
+                state.adminNotifications = cloudData.adminNotifications || [];
+                state.settings = cloudData.settings || state.settings;
+              } else {
+                initializeDefaultState();
+              }
+              updateCloudStatus("connected");
+              loadKeepLoggedIn();
+              refreshUI();
+            } else {
+              initializeDefaultState();
+            }
+          },
+          (err) => {
+            updateCloudStatus("error", err.message);
+            loadLocalFallback();
+          },
+        );
+
+        const submissionColRef = db.collection("form_submissions");
+        submissionColRef.onSnapshot(
+          (snapshot) => {
+            const list = [];
+            snapshot.forEach((doc) => {
+              list.push({ id: doc.id, ...doc.data() });
+            });
+            state.formSubmissions = list;
+            renderSubmittedFormsList();
+            renderFolderTree();
+            renderKpiDashboard();
+          },
+          (err) => {
+            console.error("Lỗi đồng bộ form nộp: ", err);
+          },
+        );
       }
-
-      if (docSnap.exists) {
-        const cloudData = docSnap.data();
-        console.log("🔥 Đã nhận cập nhật thời gian thực từ Cloud Firestore:", cloudData);
-
-        // Kiểm tra tính hợp lệ của mảng danh sách nhân sự
-        if (cloudData && Array.isArray(cloudData.members) && cloudData.members.length > 0) {
-          state.members = cloudData.members || [];
-          state.tasks = cloudData.tasks || [];
-          state.backlogs = cloudData.backlogs || [];
-          state.templates = cloudData.templates || [];
-          state.folders = cloudData.folders || [];
-          state.auditLogs = cloudData.auditLogs || [];
-          state.weeks = cloudData.weeks || [];
-          state.adminNotifications = cloudData.adminNotifications || [];
-          state.settings = cloudData.settings || state.settings;
-
-          // Cập nhật bản sao lưu an toàn vào LocalStorage
-          const stateToPersist = { ...state, currentUser: null };
-          localStorage.setItem("kpi_app_state_v28", JSON.stringify(stateToPersist));
-
-          updateCloudStatus("connected");
-          loadKeepLoggedIn();
-          refreshUI();
-          checkPauseApplication();
-        } else {
-          console.warn("⚠️ Dữ liệu đám mây trả về không đủ cấu trúc. Giữ nguyên trạng thái hiển thị hiện tại.");
-        }
-      } else {
-        console.warn("⚠️ Chưa tìm thấy document data_state trên Firestore. Khởi tạo cấu hình mẫu ban đầu.");
-        initializeDefaultState();
-        refreshUI();
-      }
-    },
-    (err) => {
-      console.error("Sự cố mạng Firestore Snapshot:", err);
-      updateCloudStatus("error", err.message);
-      loadLocalFallback();
-    }
-  );
-
-         const submissionColRef = db.collection("form_submissions");
-  submissionColRef.onSnapshot(
-    (snapshot) => {
-      const list = [];
-      snapshot.forEach((doc) => {
-        list.push({ id: doc.id, ...doc.data() });
-      });
-      state.formSubmissions = list;
-      renderSubmittedFormsList();
-      renderFolderTree();
-      renderKpiDashboard();
-    },
-    (err) => {
-      console.error("Lỗi đồng bộ form nộp:", err);
-    }
-  );
-}
 
       // Đổi sang sessionStorage để chỉ duy trì khi refresh F5 nhưng tắt tab/đổi thiết bị phải đăng nhập lại
       function loadKeepLoggedIn() {
@@ -2523,68 +2493,69 @@ function markLocalWrite() {
       }
 
       function initializeDefaultState() {
-  console.warn("⚠️ Nạp dữ liệu cấu hình ban đầu vào bộ nhớ tạm cục bộ.");
-  state.members = JSON.parse(JSON.stringify(defaultMembers));
-  state.templates = JSON.parse(JSON.stringify(defaultTemplates));
-  state.tasks = JSON.parse(JSON.stringify(defaultTasks));
-  state.weeks = [];
-  // TUYỆT ĐỐI KHÔNG GỌI saveState() Ở ĐÂY ĐỂ TRÁNH XÓA DỮ LIỆU THỰC TẾ TRÊN CLOUD
-}
+        state.members = JSON.parse(JSON.stringify(defaultMembers));
+        state.templates = JSON.parse(JSON.stringify(defaultTemplates));
+        state.tasks = JSON.parse(JSON.stringify(defaultTasks));
+        state.weeks = [
+          "Tuần 23 (01/06 - 07/06/2026)",
+          "Tuần 24 (08/06 - 14/06/2026)",
+          "Tuần 25 (15/06 - 21/06/2026)",
+        ];
+        saveState();
+      }
 
       function loadLocalFallback() {
-  const local = localStorage.getItem("kpi_app_state_v28");
-  if (local) {
-    try {
-      const parsed = JSON.parse(local);
-      state.members = parsed.members || [];
-      state.tasks = parsed.tasks || [];
-      state.backlogs = parsed.backlogs || [];
-      state.templates = parsed.templates || [];
-      state.folders = parsed.folders || [];
-      state.auditLogs = parsed.auditLogs || [];
-      state.weeks = parsed.weeks || [];
-      state.settings = parsed.settings || state.settings;
-      console.log(" Tải dữ liệu ngoại tuyến từ LocalStorage thành công.");
-    } catch (e) {
-      console.error("Lỗi đọc bộ nhớ LocalStorage:", e);
-      initializeDefaultState();
-    }
-  } else {
-    initializeDefaultState(); // Chỉ nạp local, TUYỆT ĐỐI KHÔNG GỌI saveState()
-  }
-  loadKeepLoggedIn();
-  refreshUI();
-}
-      
+        const local = localStorage.getItem("kpi_app_state_v28");
+        if (local) {
+          state = JSON.parse(local);
+        } else {
+          initializeDefaultState();
+        }
+        loadKeepLoggedIn();
+        refreshUI();
+      }
+
+      // ====== CỜ CHỐNG ECHO (chặn render đè khi Firestore bắn lại dữ liệu mình vừa ghi) ======
+      let isLocalWriting = false;
+      let localWriteTimeout = null;
+
+      function markLocalWrite() {
+        isLocalWriting = true;
+        clearTimeout(localWriteTimeout);
+        localWriteTimeout = setTimeout(() => {
+          isLocalWriting = false;
+        }, 2500); // đợi Firestore echo về xong mới mở khoá lại
+      }
 
       // ====== SAVE STATE ======
       async function saveState() {
-  markLocalWrite(); // Đặt cờ ngắt Echo
+        markLocalWrite(); // đặt cờ TRƯỚC khi ghi lên cloud
 
-  const stateToPersist = { ...state, currentUser: null };
-  localStorage.setItem("kpi_app_state_v28", JSON.stringify(stateToPersist));
+        const stateToPersist = { ...state, currentUser: null };
+        localStorage.setItem(
+          "kpi_app_state_v28",
+          JSON.stringify(stateToPersist),
+        );
 
-  if (isCloudActive && db) {
-    const stateDocRef = db.collection("system_kpi_v28").doc("data_state");
-    try {
-      await stateDocRef.set({
-        members: state.members,
-        tasks: state.tasks,
-        backlogs: state.backlogs,
-        templates: state.templates,
-        folders: state.folders,
-        auditLogs: state.auditLogs,
-        weeks: state.weeks,
-        adminNotifications: state.adminNotifications,
-        settings: state.settings,
-      }, { merge: true }); // Dùng merge: true để bảo mật các trường thuộc tính
-      console.log(" Tải dữ liệu lên Cloud Firestore thành công.");
-    } catch (e) {
-      console.error("Lỗi cập nhật Cloud State:", e);
-      showCustomToast("Lỗi đồng bộ Đám mây: " + e.message, "error");
-    }
-  }
-}
+        if (isCloudActive) {
+          const stateDocRef = db.collection("system_kpi_v28").doc("data_state");
+          try {
+            await stateDocRef.set({
+              members: state.members,
+              tasks: state.tasks,
+              backlogs: state.backlogs,
+              templates: state.templates,
+              folders: state.folders,
+              auditLogs: state.auditLogs,
+              weeks: state.weeks,
+              adminNotifications: state.adminNotifications,
+              settings: state.settings,
+            });
+          } catch (e) {
+            console.error("Lỗi cập nhật cloud state: ", e);
+          }
+        }
+      }
 
       // ====== LISTEN REALTIME STATE ======
       function listenRealtimeState() {
@@ -6496,19 +6467,21 @@ function markLocalWrite() {
       }
 
       async function resetApplicationStorage() {
-  showConfirm(
-    "Khôi phục bộ nhớ thiết bị",
-    "Thao tác này sẽ dọn dẹp bộ nhớ đệm trên máy tính hiện tại và tải lại dữ liệu mới nhất từ Đám mây. Bạn có chắc chắn?",
-    async () => {
-      localStorage.removeItem("kpi_app_state_v28");
-      sessionStorage.removeItem("kpi_app_current_user_id");
-      showCustomToast("Đã xóa cache local. Đang đồng bộ lại...", "info");
-      setTimeout(() => {
-        location.reload();
-      }, 800);
-    }
-  );
-}
+        showConfirm(
+          "Khôi phục",
+          "Xóa toàn bộ dữ liệu thiết bị và khôi phục về trạng thái ban đầu?",
+          async () => {
+            localStorage.removeItem("kpi_app_state_v28");
+            sessionStorage.removeItem("kpi_app_current_user_id");
+
+            state.settings.systemPause = false;
+
+            await saveState(); // cập nhật fireStore
+
+            location.reload();
+          },
+        );
+      }
 
       function archiveMonthKPI() {
         showCustomToast("Đã đóng sổ chốt KPI tháng thành công!", "success");
