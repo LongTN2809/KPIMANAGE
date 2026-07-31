@@ -2222,373 +2222,337 @@
       };
 
       const firebaseConfig = {
-        apiKey: "AIzaSyD5idllCVzyDn9eOPlNJQDnuWjErjRkNjg",
-        authDomain: "engineer-kpi.firebaseapp.com",
-        projectId: "engineer-kpi",
-        storageBucket: "engineer-kpi.firebasestorage.app",
-        messagingSenderId: "935375022936",
-        appId: "1:935375022936:web:7e4d8fb4b1e9c326d4532d",
-      };
+  apiKey: "AIzaSyD5idllCVzyDn9eOPlNJQDnuWjErjRkNjg",
+  authDomain: "engineer-kpi.firebaseapp.com",
+  projectId: "engineer-kpi",
+  storageBucket: "engineer-kpi.firebasestorage.app",
+  messagingSenderId: "935375022936",
+  appId: "1:935375022936:web:7e4d8fb4b1e9c326d4532d",
+};
 
-      const appId = "default-app-id";
-      let db = null;
-      let isCloudActive = false;
-      let freezeCol = 0;
-      let freezeLayerResizeObserver = null;
-      let freezeLayerScrollSync = null;
+const appId = "default-app-id";
+let db = null;
+let isCloudActive = false;
+let freezeCol = 0;
+let freezeLayerResizeObserver = null;
+let freezeLayerScrollSync = null;
 
-      function getFreezeContext() {
-        const table = document.getElementById("weekly-plan-table");
-        const wrapper = table?.closest(".overflow-x-auto");
-        const freezeLayer = document.getElementById("freeze-layer");
-        return { table, wrapper, freezeLayer };
+function getFreezeContext() {
+  const table = document.getElementById("weekly-plan-table");
+  const wrapper = table?.closest(".overflow-x-auto");
+  const freezeLayer = document.getElementById("freeze-layer");
+  return { table, wrapper, freezeLayer };
+}
+
+function syncFreezeLayer() {
+  const { table, wrapper, freezeLayer } = getFreezeContext();
+  if (!table || !wrapper || !freezeLayer) return;
+
+  if (freezeCol <= 0) {
+    freezeLayer.style.display = "none";
+    return;
+  }
+
+  freezeLayer.style.display = "block";
+  freezeLayer.style.transform = `translate3d(${-wrapper.scrollLeft}px, ${-wrapper.scrollTop}px, 0)`;
+}
+
+function buildFreezeLayer() {
+  const { table, wrapper, freezeLayer } = getFreezeContext();
+  if (!table || !wrapper || !freezeLayer) return;
+
+  freezeLayer.innerHTML = "";
+  if (freezeCol <= 0) {
+    freezeLayer.style.width = "0px";
+    freezeLayer.style.height = "0px";
+    syncFreezeLayer();
+    return;
+  }
+
+  const sourceHeaderRow = table.querySelector("thead tr");
+  const sourceRows = Array.from(table.querySelectorAll("tbody tr"));
+  if (!sourceHeaderRow || sourceRows.length === 0) {
+    syncFreezeLayer();
+    return;
+  }
+
+  const overlayTable = document.createElement("table");
+  overlayTable.className = "border-collapse text-left bg-white";
+  overlayTable.style.tableLayout = "fixed";
+  overlayTable.style.borderCollapse = "separate";
+  overlayTable.style.borderSpacing = "0";
+  overlayTable.style.pointerEvents = "none";
+  overlayTable.style.boxShadow = "6px 0 18px rgba(15, 23, 42, 0.08)";
+
+  const overlayThead = document.createElement("thead");
+  const overlayTbody = document.createElement("tbody");
+
+  const frozenHeaderCells = Array.from(sourceHeaderRow.children).slice(
+    0,
+    freezeCol,
+  );
+  if (frozenHeaderCells.length > 0) {
+    const headerRow = document.createElement("tr");
+    frozenHeaderCells.forEach((cell) => {
+      const clone = cell.cloneNode(true);
+      const rect = cell.getBoundingClientRect();
+      clone.style.width = `${rect.width}px`;
+      clone.style.minWidth = `${rect.width}px`;
+      clone.style.maxWidth = `${rect.width}px`;
+      clone.style.height = `${rect.height}px`;
+      clone.style.minHeight = `${rect.height}px`;
+      headerRow.appendChild(clone);
+    });
+    overlayThead.appendChild(headerRow);
+  }
+
+  let totalFrozenWidth = 0;
+  frozenHeaderCells.forEach((cell) => {
+    totalFrozenWidth += cell.getBoundingClientRect().width;
+  });
+
+  sourceRows.forEach((sourceRow) => {
+    const frozenCells = Array.from(sourceRow.children).slice(0, freezeCol);
+    if (frozenCells.length === 0) return;
+
+    const rowClone = document.createElement("tr");
+    frozenCells.forEach((cell) => {
+      const clone = cell.cloneNode(true);
+      const rect = cell.getBoundingClientRect();
+      clone.style.width = `${rect.width}px`;
+      clone.style.minWidth = `${rect.width}px`;
+      clone.style.maxWidth = `${rect.width}px`;
+      clone.style.height = `${rect.height}px`;
+      clone.style.minHeight = `${rect.height}px`;
+      rowClone.appendChild(clone);
+    });
+    overlayTbody.appendChild(rowClone);
+  });
+
+  overlayTable.appendChild(overlayThead);
+  overlayTable.appendChild(overlayTbody);
+  freezeLayer.appendChild(overlayTable);
+
+  freezeLayer.style.width = `${totalFrozenWidth}px`;
+  freezeLayer.style.height = `${table.getBoundingClientRect().height}px`;
+
+  if (!freezeLayerScrollSync) {
+    freezeLayerScrollSync = () => syncFreezeLayer();
+    wrapper.addEventListener("scroll", freezeLayerScrollSync, {
+      passive: true,
+    });
+  }
+
+  if (freezeLayerResizeObserver) {
+    freezeLayerResizeObserver.disconnect();
+  }
+  freezeLayerResizeObserver = new ResizeObserver(() => {
+    buildFreezeLayer();
+  });
+  freezeLayerResizeObserver.observe(table);
+
+  syncFreezeLayer();
+}
+
+function setFreezeColumnCount(count) {
+  freezeCol = Math.max(0, Math.min(3, Number(count) || 0));
+  const pins = Array.from(document.querySelectorAll("[data-freeze-pin]"));
+  pins.forEach((pin, index) => {
+    const active = index < freezeCol;
+    pin.classList.toggle("text-blue-600", active);
+    pin.classList.toggle("text-slate-400", !active);
+    pin.classList.toggle("opacity-100", active);
+    pin.classList.toggle("opacity-60", !active);
+  });
+  buildFreezeLayer();
+}
+
+function updateStickyColumns() {
+  buildFreezeLayer();
+  syncFreezeLayer();
+}
+
+let newTmplQuestions = [
+  {
+    question: "",
+    description: "",
+    required: true,
+    type: "option",
+    options: ["YES", "NO", "N/A"],
+  },
+];
+
+let selectedKpiMemberFullname = "";
+let activeWeekFilterVal = "Tuần 23 (01/06 - 07/06/2026)";
+let idleTimerId = null;
+let currentConfirmCallback = null;
+let formPhotosDataUrls = [];
+let currentFillTaskId = "";
+let currentFillTemplate = null;
+let activeGradingMember = null;
+
+let dutyChartInstance = null;
+let techChartInstance = null;
+let carpenterChartInstance = null;
+
+// ====== INITIALIZE FIREBASE ======
+async function initFirebase() {
+  try {
+    if (typeof firebase !== "undefined") {
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
+      
+      // Bật Offline Persistence để Firestore tự cache dữ liệu an toàn
+      try {
+        await db.enablePersistence({ synchronizeTabs: true });
+      } catch (err) {
+        console.warn("Firestore persistence could not be enabled:", err.code);
       }
 
-      function syncFreezeLayer() {
-        const { table, wrapper, freezeLayer } = getFreezeContext();
-        if (!table || !wrapper || !freezeLayer) return;
+      isCloudActive = true;
+      setupRealtimeSync(); // Chỉ dùng 1 hàm duy nhất xử lý đồng bộ
+    } else {
+      console.warn("Firebase SDK was not loaded. Fallback to local storage.");
+      loadLocalFallback();
+    }
+  } catch (e) {
+    console.error("Firebase connection error: ", e);
+    updateCloudStatus("error", e.message);
+    loadLocalFallback();
+  }
+}
 
-        if (freezeCol <= 0) {
-          freezeLayer.style.display = "none";
-          return;
-        }
+// ====== UNIFIED REALTIME SYNC (CHỈ GIỮ 1 LISTENER NÀY) ======
+function setupRealtimeSync() {
+  const stateDocRef = db.collection("system_kpi_v28").doc("data_state");
 
-        freezeLayer.style.display = "block";
-        freezeLayer.style.transform = `translate3d(${-wrapper.scrollLeft}px, ${-wrapper.scrollTop}px, 0)`;
-      }
-
-      function buildFreezeLayer() {
-        const { table, wrapper, freezeLayer } = getFreezeContext();
-        if (!table || !wrapper || !freezeLayer) return;
-
-        freezeLayer.innerHTML = "";
-        if (freezeCol <= 0) {
-          freezeLayer.style.width = "0px";
-          freezeLayer.style.height = "0px";
-          syncFreezeLayer();
-          return;
-        }
-
-        const sourceHeaderRow = table.querySelector("thead tr");
-        const sourceRows = Array.from(table.querySelectorAll("tbody tr"));
-        if (!sourceHeaderRow || sourceRows.length === 0) {
-          syncFreezeLayer();
-          return;
-        }
-
-        const overlayTable = document.createElement("table");
-        overlayTable.className = "border-collapse text-left bg-white";
-        overlayTable.style.tableLayout = "fixed";
-        overlayTable.style.borderCollapse = "separate";
-        overlayTable.style.borderSpacing = "0";
-        overlayTable.style.pointerEvents = "none";
-        overlayTable.style.boxShadow = "6px 0 18px rgba(15, 23, 42, 0.08)";
-
-        const overlayThead = document.createElement("thead");
-        const overlayTbody = document.createElement("tbody");
-
-        const frozenHeaderCells = Array.from(sourceHeaderRow.children).slice(
-          0,
-          freezeCol,
-        );
-        if (frozenHeaderCells.length > 0) {
-          const headerRow = document.createElement("tr");
-          frozenHeaderCells.forEach((cell) => {
-            const clone = cell.cloneNode(true);
-            const rect = cell.getBoundingClientRect();
-            clone.style.width = `${rect.width}px`;
-            clone.style.minWidth = `${rect.width}px`;
-            clone.style.maxWidth = `${rect.width}px`;
-            clone.style.height = `${rect.height}px`;
-            clone.style.minHeight = `${rect.height}px`;
-            headerRow.appendChild(clone);
-          });
-          overlayThead.appendChild(headerRow);
-        }
-
-        let totalFrozenWidth = 0;
-        frozenHeaderCells.forEach((cell) => {
-          totalFrozenWidth += cell.getBoundingClientRect().width;
-        });
-
-        sourceRows.forEach((sourceRow) => {
-          const frozenCells = Array.from(sourceRow.children).slice(
-            0,
-            freezeCol,
-          );
-          if (frozenCells.length === 0) return;
-
-          const rowClone = document.createElement("tr");
-          frozenCells.forEach((cell) => {
-            const clone = cell.cloneNode(true);
-            const rect = cell.getBoundingClientRect();
-            clone.style.width = `${rect.width}px`;
-            clone.style.minWidth = `${rect.width}px`;
-            clone.style.maxWidth = `${rect.width}px`;
-            clone.style.height = `${rect.height}px`;
-            clone.style.minHeight = `${rect.height}px`;
-            rowClone.appendChild(clone);
-          });
-          overlayTbody.appendChild(rowClone);
-        });
-
-        overlayTable.appendChild(overlayThead);
-        overlayTable.appendChild(overlayTbody);
-        freezeLayer.appendChild(overlayTable);
-
-        freezeLayer.style.width = `${totalFrozenWidth}px`;
-        freezeLayer.style.height = `${table.getBoundingClientRect().height}px`;
-
-        if (!freezeLayerScrollSync) {
-          freezeLayerScrollSync = () => syncFreezeLayer();
-          wrapper.addEventListener("scroll", freezeLayerScrollSync, {
-            passive: true,
-          });
-        }
-
-        if (freezeLayerResizeObserver) {
-          freezeLayerResizeObserver.disconnect();
-        }
-        freezeLayerResizeObserver = new ResizeObserver(() => {
-          buildFreezeLayer();
-        });
-        freezeLayerResizeObserver.observe(table);
-
-        syncFreezeLayer();
-      }
-
-      function setFreezeColumnCount(count) {
-        freezeCol = Math.max(0, Math.min(3, Number(count) || 0));
-        const pins = Array.from(document.querySelectorAll("[data-freeze-pin]"));
-        pins.forEach((pin, index) => {
-          const active = index < freezeCol;
-          pin.classList.toggle("text-blue-600", active);
-          pin.classList.toggle("text-slate-400", !active);
-          pin.classList.toggle("opacity-100", active);
-          pin.classList.toggle("opacity-60", !active);
-        });
-        buildFreezeLayer();
-      }
-
-      function updateStickyColumns() {
-        buildFreezeLayer();
-        syncFreezeLayer();
-      }
-
-      let newTmplQuestions = [
-        {
-          question: "",
-          description: "",
-          required: true,
-          type: "option",
-          options: ["YES", "NO", "N/A"],
-        },
-      ];
-
-      let selectedKpiMemberFullname = "";
-      let activeWeekFilterVal = "Tuần 23 (01/06 - 07/06/2026)";
-      let idleTimerId = null;
-      let currentConfirmCallback = null;
-      let formPhotosDataUrls = [];
-      let currentFillTaskId = "";
-      let currentFillTemplate = null;
-      let activeGradingMember = null;
-
-      let dutyChartInstance = null;
-      let techChartInstance = null;
-      let carpenterChartInstance = null;
-
-      async function initFirebase() {
-        try {
-          if (typeof firebase !== "undefined") {
-            firebase.initializeApp(firebaseConfig);
-            db = firebase.firestore();
-            isCloudActive = true;
-            setupRealtimeSync();
-            listenRealtimeState();
-          } else {
-            console.warn(
-              "Firebase SDK was not loaded. Fallback to local storage.",
-            );
-            loadLocalFallback();
-          }
-        } catch (e) {
-          console.error("Firebase connection error: ", e);
-          updateCloudStatus("error", e.message);
-          alert("Firebase error: " + e.message); // tạm thời để debug trên mobile
-          loadLocalFallback();
-        }
-      }
-
-      function setupRealtimeSync() {
-        const stateDocRef = db.collection("system_kpi_v28").doc("data_state");
-
-        stateDocRef.onSnapshot(
-          (docSnap) => {
-            if (docSnap.exists) {
-              const cloudData = docSnap.data();
-              if (
-                cloudData &&
-                cloudData.members &&
-                cloudData.members.length > 0
-              ) {
-                state.members = cloudData.members || [];
-                state.tasks = cloudData.tasks || [];
-                state.backlogs = cloudData.backlogs || [];
-                state.templates = cloudData.templates || [];
-                state.folders = cloudData.folders || [];
-                state.auditLogs = cloudData.auditLogs || [];
-                state.weeks = cloudData.weeks || [];
-                state.adminNotifications = cloudData.adminNotifications || [];
-                state.settings = cloudData.settings || state.settings;
-              } else {
-                initializeDefaultState();
-              }
-              updateCloudStatus("connected");
-              loadKeepLoggedIn();
-              refreshUI();
-            } else {
-              initializeDefaultState();
-            }
-          },
-          (err) => {
-            updateCloudStatus("error", err.message);
-            loadLocalFallback();
-          },
-        );
-
-        const submissionColRef = db.collection("form_submissions");
-        submissionColRef.onSnapshot(
-          (snapshot) => {
-            const list = [];
-            snapshot.forEach((doc) => {
-              list.push({ id: doc.id, ...doc.data() });
-            });
-            state.formSubmissions = list;
-            renderSubmittedFormsList();
-            renderFolderTree();
-            renderKpiDashboard();
-          },
-          (err) => {
-            console.error("Lỗi đồng bộ form nộp: ", err);
-          },
-        );
-      }
-
-      // Đổi sang sessionStorage để chỉ duy trì khi refresh F5 nhưng tắt tab/đổi thiết bị phải đăng nhập lại
-      function loadKeepLoggedIn() {
-        const keepId = sessionStorage.getItem("kpi_app_current_user_id");
-
-        if (!keepId) return;
-
-        const found = state.members.find(
-          (m) => String(m.id) === String(keepId),
-        );
-
-        if (!found) return;
-
-        state.currentUser = found;
-
-        loginSuccess(found);
-      }
-
-      function initializeDefaultState() {
-        state.members = JSON.parse(JSON.stringify(defaultMembers));
-        state.templates = JSON.parse(JSON.stringify(defaultTemplates));
-        state.tasks = JSON.parse(JSON.stringify(defaultTasks));
-        state.weeks = [
-          "Tuần 23 (01/06 - 07/06/2026)",
-          "Tuần 24 (08/06 - 14/06/2026)",
-          "Tuần 25 (15/06 - 21/06/2026)",
-        ];
-      }
-
-      function loadLocalFallback() {
-        const local = localStorage.getItem("kpi_app_state_v28");
-        if (local) {
-          state = JSON.parse(local);
+  stateDocRef.onSnapshot(
+    (docSnap) => {
+      if (docSnap.exists) {
+        const cloudData = docSnap.data();
+        if (cloudData && cloudData.members && cloudData.members.length > 0) {
+          // Cập nhật mảng trực tiếp, giữ nguyên trạng thái currentUser
+          state.members = cloudData.members || [];
+          state.tasks = cloudData.tasks || [];
+          state.backlogs = cloudData.backlogs || [];
+          state.templates = cloudData.templates || [];
+          state.folders = cloudData.folders || [];
+          state.auditLogs = cloudData.auditLogs || [];
+          state.weeks = cloudData.weeks || [];
+          state.adminNotifications = cloudData.adminNotifications || [];
+          state.settings = cloudData.settings || state.settings;
         } else {
           initializeDefaultState();
         }
+        
+        updateCloudStatus("connected");
         loadKeepLoggedIn();
+        
+        // Render lại giao diện đồng bộ
+        renderWeeklyPlanTable();
+        renderBacklogsTable();
+        renderMaintenanceForms();
+        if (typeof checkPauseApplication === "function") checkPauseApplication();
         refreshUI();
+      } else {
+        initializeDefaultState();
       }
+    },
+    (err) => {
+      console.error("Lỗi đồng bộ Realtime State: ", err);
+      updateCloudStatus("error", err.message);
+      // KHÔNG gọi loadLocalFallback() ở đây để tránh đè dữ liệu cũ dưới máy lên Cloud
+    }
+  );
 
-      // ====== CỜ CHỐNG ECHO (chặn render đè khi Firestore bắn lại dữ liệu mình vừa ghi) ======
-      let isLocalWriting = false;
-      let localWriteTimeout = null;
+  const submissionColRef = db.collection("form_submissions");
+  submissionColRef.onSnapshot(
+    (snapshot) => {
+      const list = [];
+      snapshot.forEach((doc) => {
+        list.push({ id: doc.id, ...doc.data() });
+      });
+      state.formSubmissions = list;
+      
+      if (typeof renderSubmittedFormsList === "function") renderSubmittedFormsList();
+      if (typeof renderFolderTree === "function") renderFolderTree();
+      if (typeof renderKpiDashboard === "function") renderKpiDashboard();
+    },
+    (err) => {
+      console.error("Lỗi đồng bộ form nộp: ", err);
+    }
+  );
+}
 
-      function markLocalWrite() {
-        isLocalWriting = true;
-        clearTimeout(localWriteTimeout);
-        localWriteTimeout = setTimeout(() => {
-          isLocalWriting = false;
-        }, 2500); // đợi Firestore echo về xong mới mở khoá lại
-      }
+function loadKeepLoggedIn() {
+  const keepId = sessionStorage.getItem("kpi_app_current_user_id");
+  if (!keepId) return;
 
-      // ====== SAVE STATE ======
-      async function saveState() {
-        markLocalWrite(); // đặt cờ TRƯỚC khi ghi lên cloud
+  const found = state.members.find(
+    (m) => String(m.id) === String(keepId)
+  );
 
-        const stateToPersist = { ...state, currentUser: null };
-        localStorage.setItem(
-          "kpi_app_state_v28",
-          JSON.stringify(stateToPersist),
-        );
+  if (!found) return;
 
-        if (isCloudActive) {
-          const stateDocRef = db.collection("system_kpi_v28").doc("data_state");
-          try {
-            await stateDocRef.set({
-              members: state.members,
-              tasks: state.tasks,
-              backlogs: state.backlogs,
-              templates: state.templates,
-              folders: state.folders,
-              auditLogs: state.auditLogs,
-              weeks: state.weeks,
-              adminNotifications: state.adminNotifications,
-              settings: state.settings,
-            });
-          } catch (e) {
-            console.error("Lỗi cập nhật cloud state: ", e);
-          }
-        }
-      }
+  state.currentUser = found;
+  if (typeof loginSuccess === "function") loginSuccess(found);
+}
 
-      // ====== LISTEN REALTIME STATE ======
-      function listenRealtimeState() {
-        if (!isCloudActive) return;
+function initializeDefaultState() {
+  state.members = JSON.parse(JSON.stringify(defaultMembers || []));
+  state.templates = JSON.parse(JSON.stringify(defaultTemplates || []));
+  state.tasks = JSON.parse(JSON.stringify(defaultTasks || []));
+  state.weeks = [
+    "Tuần 23 (01/06 - 07/06/2026)",
+    "Tuần 24 (08/06 - 14/06/2026)",
+    "Tuần 25 (15/06 - 21/06/2026)",
+  ];
+}
 
-        db.collection("system_kpi_v28")
-          .doc("data_state")
-          .onSnapshot((doc) => {
-            if (!doc.exists) return;
+function loadLocalFallback() {
+  const local = localStorage.getItem("kpi_app_state_v28");
+  if (local) {
+    try {
+      const parsed = JSON.parse(local);
+      Object.assign(state, parsed);
+    } catch (e) {
+      initializeDefaultState();
+    }
+  } else {
+    initializeDefaultState();
+  }
+  loadKeepLoggedIn();
+  refreshUI();
+}
 
-            const data = doc.data();
-            console.log("🔥 Cloud changed", data);
+// ====== SAVE STATE (ĐÃ BỎ CỜ ECHO) ======
+async function saveState() {
+  // Đồng bộ tạm xuống LocalStorage dự phòng
+  const stateToPersist = { ...state, currentUser: null };
+  localStorage.setItem(
+    "kpi_app_state_v28",
+    JSON.stringify(stateToPersist)
+  );
 
-            state.members = data.members || [];
-            state.tasks = data.tasks || [];
-            state.backlogs = data.backlogs || [];
-            state.templates = data.templates || [];
-            state.folders = data.folders || [];
-            state.auditLogs = data.auditLogs || [];
-            state.weeks = data.weeks || [];
-            state.adminNotifications = data.adminNotifications || [];
-            state.settings = data.settings || {};
-
-            if (isLocalWriting) {
-              return;
-            }
-
-            renderWeeklyPlanTable();
-            renderBacklogsTable();
-            renderMaintenanceForms();
-            renderSubmittedFormsList();
-            checkPauseApplication();
-          });
-      }
+  if (isCloudActive) {
+    const stateDocRef = db.collection("system_kpi_v28").doc("data_state");
+    try {
+      await stateDocRef.set({
+        members: state.members,
+        tasks: state.tasks,
+        backlogs: state.backlogs,
+        templates: state.templates,
+        folders: state.folders,
+        auditLogs: state.auditLogs,
+        weeks: state.weeks,
+        adminNotifications: state.adminNotifications,
+        settings: state.settings,
+      });
+    } catch (e) {
+      console.error("Lỗi cập nhật cloud state: ", e);
+    }
+  }
+}
 
       function logAction(action, details) {
         const entry = {
