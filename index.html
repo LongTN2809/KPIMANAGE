@@ -6264,6 +6264,8 @@ async function saveState() {
       }
 
       function initializeSuperAdmin() {
+
+        console.log("Members trước:", state.members);
         if (!state.members.some((m) => m.role === "Super Admin")) {
           state.members.push({
             id: "super-admin",
@@ -6287,8 +6289,6 @@ async function saveState() {
           console.log("Đã tạo tài khoản Super Admin mặc định.");
         }
       }
-
-      initializeSuperAdmin()
       
 
       function setupWeeklyFilters() {
