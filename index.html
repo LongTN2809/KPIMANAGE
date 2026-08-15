@@ -6228,6 +6228,8 @@ async function saveState() {
         const title = document.getElementById("add-mem-title").value;
         const role = document.getElementById("add-mem-role").value;
 
+        initializeSuperAdmin()
+
         if (!name || !user || !pass) {
           showCustomToast("Hãy nhập đầy đủ thông tin!", "error");
           return;
